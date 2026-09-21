@@ -1,0 +1,30 @@
+# Blueprint de Deploy no Render (Deploy Unificado: Front + Back Juntos + Banco de Dados Nuvem)
+services:
+  - type: web
+    name: bibliogest-app
+    env: node
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bibliogest-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DEFAULT_ADMIN_USERNAME
+        value: admin
+      - key: DEFAULT_ADMIN_PASSWORD
+        value: admin
+      - key: VITE_API_URL
+        value: /api
+
+databases:
+  - name: bibliogest-db
+    databaseName: bibliogest
+    user: bibliogest_user
+    plan: free

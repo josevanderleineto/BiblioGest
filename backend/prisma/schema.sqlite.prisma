@@ -1,0 +1,342 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  username           String    @unique
+  passwordHash       String
+  mustChangePassword Boolean   @default(true)
+  name               String
+  socialName         String?
+  cpf                String?   @unique
+  rg                 String?
+  birthDate          String?
+  gender             String?
+  email              String    @unique
+  phone              String?
+  address            String?
+  zipCode            String?
+  city               String?
+  state              String?
+  country            String?   @default("Brasil")
+  registrationNumber String    @unique
+  category           String    @default("ALUNO")
+  
+  libraryId          String?
+  library            Library?  @relation(fields: [libraryId], references: [id])
+  
+  roleId             String
+  role               Role      @relation(fields: [roleId], references: [id])
+  
+  createdAt          DateTime  @default(now())
+  validUntil         DateTime?
+  isActive           Boolean   @default(true)
+  photoUrl           String?
+  notes              String?
+
+  loans              Loan[]
+  reservations       Reservation[]
+  fines              Fine[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  category    String
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Library {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  phone          String?
+  email          String?
+  openingHours   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  users          User[]
+  items          Item[]
+
+  @@map("libraries")
+}
+
+model Authority {
+  id          String   @id @default(uuid())
+  type        String
+  heading     String
+  seeAlso     String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  biblioLinks BibliographicAuthority[]
+
+  @@map("authorities")
+}
+
+model BibliographicRecord {
+  id                 String   @id @default(uuid())
+  materialType       String   @default("LIVRO")
+  title              String
+  subtitle           String?
+  authors            String?
+  statementOfResp    String?
+  publicationYear    Int?
+  publisher          String?
+  placeOfPublication String?
+  edition            String?
+  isbn               String?
+  issn               String?
+  language           String?  @default("por")
+  summary            String?
+  subjects           String?
+  
+  cddNotation        String?
+  cduNotation        String?
+  cutterNotation     String?
+  callNumber         String?
+  
+  marcData           String?
+  rdaData            String?
+  coverUrl           String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  items              Item[]
+  reservations       Reservation[]
+  authorities        BibliographicAuthority[]
+
+  @@map("bibliographic_records")
+}
+
+model BibliographicAuthority {
+  biblioId    String
+  authorityId String
+  biblio      BibliographicRecord @relation(fields: [biblioId], references: [id], onDelete: Cascade)
+  authority   Authority           @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+
+  @@id([biblioId, authorityId])
+  @@map("bibliographic_authorities")
+}
+
+model Item {
+  id             String    @id @default(uuid())
+  barcode        String    @unique
+  tombo          String    @unique
+  biblioId       String
+  biblio         BibliographicRecord @relation(fields: [biblioId], references: [id], onDelete: Cascade)
+  
+  libraryId      String
+  library        Library   @relation(fields: [libraryId], references: [id])
+  
+  location       String?
+  shelf          String?
+  status         String    @default("DISPONIVEL")
+  callNumber     String?
+  acquisitionDate DateTime? @default(now())
+  price          Float?
+  source         String?
+  notes          String?
+
+  loans          Loan[]
+  reservations   Reservation[]
+  disposals      Disposal[]
+
+  @@map("items")
+}
+
+model CirculationRule {
+  id               String   @id @default(uuid())
+  userCategory     String
+  materialType     String
+  maxLoans         Int      @default(3)
+  loanDays         Int      @default(7)
+  maxRenewals      Int      @default(2)
+  finePerDay       Float    @default(1.00)
+  gracePeriodDays  Int      @default(0)
+  isHoldAllowed    Boolean  @default(true)
+
+  @@unique([userCategory, materialType])
+  @@map("circulation_rules")
+}
+
+model Loan {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  itemId        String
+  item          Item      @relation(fields: [itemId], references: [id])
+  checkoutDate  DateTime  @default(now())
+  dueDate       DateTime
+  returnDate    DateTime?
+  renewalCount  Int       @default(0)
+  status        String    @default("ATIVO")
+  notes         String?
+
+  fines         Fine[]
+
+  @@map("loans")
+}
+
+model Reservation {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  biblioId    String
+  biblio      BibliographicRecord @relation(fields: [biblioId], references: [id])
+  itemId      String?
+  item        Item?     @relation(fields: [itemId], references: [id])
+  requestDate DateTime  @default(now())
+  expiryDate  DateTime?
+  status      String    @default("AGUARDANDO")
+
+  @@map("reservations")
+}
+
+model Fine {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  loanId      String?
+  loan        Loan?     @relation(fields: [loanId], references: [id])
+  amount      Float
+  status      String    @default("PENDENTE")
+  reason      String?
+  issuedAt    DateTime  @default(now())
+  paidAt      DateTime?
+
+  @@map("fines")
+}
+
+model Serial {
+  id          String   @id @default(uuid())
+  issn        String   @unique
+  title       String
+  publisher   String?
+  frequency   String?
+  location    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  issues      SerialIssue[]
+
+  @@map("serials")
+}
+
+model SerialIssue {
+  id          String   @id @default(uuid())
+  serialId    String
+  serial      Serial   @relation(fields: [serialId], references: [id], onDelete: Cascade)
+  volume      String?
+  number      String?
+  year        Int?
+  publishedAt DateTime?
+  receivedAt  DateTime @default(now())
+  notes       String?
+
+  @@map("serial_issues")
+}
+
+model Acquisition {
+  id           String   @id @default(uuid())
+  title        String
+  author       String?
+  isbn         String?
+  supplier     String?
+  acquisitionType String
+  quantity     Int      @default(1)
+  unitValue    Float?
+  totalValue   Float?
+  invoiceNumber String?
+  receivedDate DateTime @default(now())
+  notes        String?
+
+  @@map("acquisitions")
+}
+
+model Disposal {
+  id           String   @id @default(uuid())
+  itemId       String
+  item         Item     @relation(fields: [itemId], references: [id])
+  reason       String
+  authorizedBy String
+  disposalDate DateTime @default(now())
+  destination  String?
+  notes        String?
+
+  @@map("disposals")
+}
+
+model InventoryScan {
+  id           String   @id @default(uuid())
+  sessionId    String
+  libraryId    String
+  barcodeScanned String
+  scannedAt    DateTime @default(now())
+  statusFound  String
+
+  @@map("inventory_scans")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  module     String
+  recordId   String?
+  ipAddress  String?
+  result     String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}

@@ -1,0 +1,28 @@
+{
+  "name": "bibliogest-desktop",
+  "version": "1.0.0",
+  "description": "Desktop Launcher for BiblioGest Library Management System",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis",
+    "build:mac": "electron-builder --mac dmg"
+  },
+  "dependencies": {
+    "express": "^4.18.3"
+  },
+  "devDependencies": {
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bibliogest.launcher",
+    "productName": "BiblioGest",
+    "mac": {
+      "category": "public.app-category.education"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

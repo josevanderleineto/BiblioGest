@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PatronCategory {
+  ALUNO
+  PROFESSOR
+  SERVIDOR
+  PESQUISADOR
+  COMUNIDADE
+  VISITANTE
+  OUTRO
+}
+
+enum MaterialType {
+  LIVRO
+  EBOOK
+  PERIODICO
+  TCC
+  DISSERTACAO
+  TESE
+  ARTIGO
+  AUDIOVISUAL
+  CARTOGRAFICO
+  ELETRONICO
+  DOCUMENTO
+  OBRA_RARA
+  OUTROS
+}
+
+enum ItemStatus {
+  DISPONIVEL
+  EMPRESTADO
+  RESERVADO
+  EM_MANUTENCAO
+  EXTRAVIADO
+  DESCARTADO
+  PERDIDO
+}
+
+enum LoanStatus {
+  ATIVO
+  DEVOLVIDO
+  ATRASADO
+}
+
+enum ReservationStatus {
+  AGUARDANDO
+  DISPONIVEL_PARA_RETIRADA
+  ATENDIDA
+  CANCELADA
+  EXPIRADA
+}
+
+enum FineStatus {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
+
+enum AuthorityType {
+  PESSOA
+  ENTIDADE
+  EVENTO
+  ASSUNTO
+  SERIE
+  TITULO_UNIFORME
+  TERMO_GEOGRAFICO
+}
+
+model User {
+  id                 String         @id @default(uuid())
+  username           String         @unique
+  passwordHash       String
+  mustChangePassword Boolean        @default(true)
+  name               String
+  socialName         String?
+  cpf                String?        @unique
+  rg                 String?
+  birthDate          String?
+  gender             String?
+  email              String         @unique
+  phone              String?
+  address            String?
+  zipCode            String?
+  city               String?
+  state              String?
+  country            String?        @default("Brasil")
+  registrationNumber String         @unique
+  category           PatronCategory @default(ALUNO)
+  
+  libraryId          String?
+  library            Library?       @relation(fields: [libraryId], references: [id])
+  
+  roleId             String
+  role               Role           @relation(fields: [roleId], references: [id])
+  
+  createdAt          DateTime       @default(now())
+  validUntil         DateTime?
+  isActive           Boolean        @default(true)
+  photoUrl           String?
+  notes              String?
+
+  loans              Loan[]
+  reservations       Reservation[]
+  fines              Fine[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique // e.g., 'users.view', 'catalog.edit'
+  name        String
+  category    String   // e.g., 'Users', 'Catalog', 'Circulation'
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Library {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  phone          String?
+  email          String?
+  openingHours   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  users          User[]
+  items          Item[]
+
+  @@map("libraries")
+}
+
+model Authority {
+  id          String        @id @default(uuid())
+  type        AuthorityType
+  heading     String
+  seeAlso     String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  biblioLinks BibliographicAuthority[]
+
+  @@map("authorities")
+}
+
+model BibliographicRecord {
+  id                 String       @id @default(uuid())
+  materialType       MaterialType @default(LIVRO)
+  title              String
+  subtitle           String?
+  authors            String?      // General display string
+  statementOfResp    String?
+  publicationYear    Int?
+  publisher          String?
+  placeOfPublication String?
+  edition            String?
+  isbn               String?
+  issn               String?
+  language           String?      @default("por")
+  summary            String?
+  subjects           String?      // Comma separated subjects
+  
+  cddNotation        String?      // CDD classification
+  cduNotation        String?      // CDU classification
+  cutterNotation     String?      // Cutter / Author notation
+  callNumber         String?      // Full call number (005.133 S586p 2026)
+  
+  marcData           Json?        // Full MARC21 structure: [{ tag, ind1, ind2, subfields: [{code, value}] }]
+  rdaData            Json?        // RDA structured metadata
+  coverUrl           String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  items              Item[]
+  reservations       Reservation[]
+  authorities        BibliographicAuthority[]
+
+  @@map("bibliographic_records")
+}
+
+model BibliographicAuthority {
+  biblioId    String
+  authorityId String
+  biblio      BibliographicRecord @relation(fields: [biblioId], references: [id], onDelete: Cascade)
+  authority   Authority           @relation(fields: [authorityId], references: [id], onDelete: Cascade)
+
+  @@id([biblioId, authorityId])
+  @@map("bibliographic_authorities")
+}
+
+model Item {
+  id             String     @id @default(uuid())
+  barcode        String     @unique
+  tombo          String     @unique
+  biblioId       String
+  biblio         BibliographicRecord @relation(fields: [biblioId], references: [id], onDelete: Cascade)
+  
+  libraryId      String
+  library        Library    @relation(fields: [libraryId], references: [id])
+  
+  location       String?    // e.g. "Acervo Geral"
+  shelf          String?    // e.g. "Estante 04, Prateleira B"
+  status         ItemStatus @default(DISPONIVEL)
+  callNumber     String?    // Copy-specific call number if custom
+  acquisitionDate DateTime? @default(now())
+  price          Float?
+  source         String?    // "Compra", "Doação", etc.
+  notes          String?
+
+  loans          Loan[]
+  reservations   Reservation[]
+  disposals      Disposal[]
+
+  @@map("items")
+}
+
+model CirculationRule {
+  id               String         @id @default(uuid())
+  userCategory     PatronCategory
+  materialType     MaterialType
+  maxLoans         Int            @default(3)
+  loanDays         Int            @default(7)
+  maxRenewals      Int            @default(2)
+  finePerDay       Float          @default(1.00)
+  gracePeriodDays  Int            @default(0)
+  isHoldAllowed    Boolean        @default(true)
+
+  @@unique([userCategory, materialType])
+  @@map("circulation_rules")
+}
+
+model Loan {
+  id            String     @id @default(uuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id])
+  itemId        String
+  item          Item       @relation(fields: [itemId], references: [id])
+  checkoutDate  DateTime   @default(now())
+  dueDate       DateTime
+  returnDate    DateTime?
+  renewalCount  Int        @default(0)
+  status        LoanStatus @default(ATIVO)
+  notes         String?
+
+  fines         Fine[]
+
+  @@map("loans")
+}
+
+model Reservation {
+  id          String            @id @default(uuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id])
+  biblioId    String
+  biblio      BibliographicRecord @relation(fields: [biblioId], references: [id])
+  itemId      String?
+  item        Item?             @relation(fields: [itemId], references: [id])
+  requestDate DateTime          @default(now())
+  expiryDate  DateTime?
+  status      ReservationStatus @default(AGUARDANDO)
+
+  @@map("reservations")
+}
+
+model Fine {
+  id          String     @id @default(uuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  loanId      String?
+  loan        Loan?      @relation(fields: [loanId], references: [id])
+  amount      Float
+  status      FineStatus @default(PENDENTE)
+  reason      String?
+  issuedAt    DateTime   @default(now())
+  paidAt      DateTime?
+
+  @@map("fines")
+}
+
+model Serial {
+  id          String   @id @default(uuid())
+  issn        String   @unique
+  title       String
+  publisher   String?
+  frequency   String?  // "Mensal", "Trimestral", "Anual", etc.
+  location    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  issues      SerialIssue[]
+
+  @@map("serials")
+}
+
+model SerialIssue {
+  id          String   @id @default(uuid())
+  serialId    String
+  serial      Serial   @relation(fields: [serialId], references: [id], onDelete: Cascade)
+  volume      String?
+  number      String?
+  year        Int?
+  publishedAt DateTime?
+  receivedAt  DateTime @default(now())
+  notes       String?
+
+  @@map("serial_issues")
+}
+
+model Acquisition {
+  id           String   @id @default(uuid())
+  title        String
+  author       String?
+  isbn         String?
+  supplier     String?  // Fornecedor
+  acquisitionType String// "Compra", "Doação", "Permuta"
+  quantity     Int      @default(1)
+  unitValue    Float?
+  totalValue   Float?
+  invoiceNumber String? // Nota Fiscal
+  receivedDate DateTime @default(now())
+  notes        String?
+
+  @@map("acquisitions")
+}
+
+model Disposal {
+  id           String   @id @default(uuid())
+  itemId       String
+  item         Item     @relation(fields: [itemId], references: [id])
+  reason       String   // "Extravio", "Dano irrecuperável", "Obsolescência"
+  authorizedBy String
+  disposalDate DateTime @default(now())
+  destination  String?  // "Reciclagem", "Doação", "Descarte"
+  notes        String?
+
+  @@map("disposals")
+}
+
+model InventoryScan {
+  id           String   @id @default(uuid())
+  sessionId    String   // Batch/Session ID for an inventory run
+  libraryId    String
+  barcodeScanned String
+  scannedAt    DateTime @default(now())
+  statusFound  String   // "ENCONTRADO", "EMPRESTADO", "INESPERADO", "NAO_ENCONTRADO"
+
+  @@map("inventory_scans")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String   // e.g. "USER_LOGIN", "CREATE_RECORD", "CHECKOUT_ITEM"
+  module     String   // e.g. "AUTH", "CATALOG", "CIRCULATION", "DATABASE"
+  recordId   String?
+  ipAddress  String?
+  result     String?  // "SUCCESS", "FAILURE"
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
