@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { ShieldAlert, Lock, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const ForcePasswordChangeModal: React.FC = () => {
-  const { mustChangePassword, updateUser } = useAuth();
+  const { mustChangePassword, updateUser, hasPermission } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   if (!mustChangePassword) return null;
 
@@ -34,6 +36,7 @@ export const ForcePasswordChangeModal: React.FC = () => {
         newPassword,
       });
       updateUser({ mustChangePassword: false });
+      navigate(hasPermission('settings.edit') ? '/database' : '/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao alterar senha.');
     } finally {

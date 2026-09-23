@@ -42,7 +42,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     });
 
     if (!user || !user.isActive) {
-      return res.status(403).json({ error: 'Usuário inativo ou não encotrado.' });
+      return res.status(401).json({ error: 'Sessão expirada ou usuário inativo. Entre novamente.' });
     }
 
     const permissionCodes = user.role.permissions.map((rp) => rp.permission.code);

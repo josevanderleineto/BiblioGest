@@ -1,0 +1,62 @@
+-- Estrutura isolada do BiblioGest. Esta migração é somente aditiva: não remove
+-- as tabelas legadas ("User", "Item" etc.) que possam existir no mesmo banco.
+CREATE TYPE "BiblioGestPatronCategory" AS ENUM ('ALUNO', 'PROFESSOR', 'SERVIDOR', 'PESQUISADOR', 'COMUNIDADE', 'VISITANTE', 'OUTRO');
+CREATE TYPE "BiblioGestMaterialType" AS ENUM ('LIVRO', 'EBOOK', 'PERIODICO', 'TCC', 'DISSERTACAO', 'TESE', 'ARTIGO', 'AUDIOVISUAL', 'CARTOGRAFICO', 'ELETRONICO', 'DOCUMENTO', 'OBRA_RARA', 'OUTROS');
+CREATE TYPE "BiblioGestItemStatus" AS ENUM ('DISPONIVEL', 'EMPRESTADO', 'RESERVADO', 'EM_MANUTENCAO', 'EXTRAVIADO', 'DESCARTADO', 'PERDIDO');
+CREATE TYPE "BiblioGestLoanStatus" AS ENUM ('ATIVO', 'DEVOLVIDO', 'ATRASADO');
+CREATE TYPE "BiblioGestReservationStatus" AS ENUM ('AGUARDANDO', 'DISPONIVEL_PARA_RETIRADA', 'ATENDIDA', 'CANCELADA', 'EXPIRADA');
+CREATE TYPE "BiblioGestFineStatus" AS ENUM ('PENDENTE', 'PAGO', 'CANCELADO');
+CREATE TYPE "BiblioGestAuthorityType" AS ENUM ('PESSOA', 'ENTIDADE', 'EVENTO', 'ASSUNTO', 'SERIE', 'TITULO_UNIFORME', 'TERMO_GEOGRAFICO');
+
+CREATE TABLE "roles" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "description" TEXT, "isSystem" BOOLEAN NOT NULL DEFAULT false, CONSTRAINT "roles_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "permissions" ("id" TEXT NOT NULL, "code" TEXT NOT NULL, "name" TEXT NOT NULL, "category" TEXT NOT NULL, "description" TEXT, CONSTRAINT "permissions_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "libraries" ("id" TEXT NOT NULL, "code" TEXT NOT NULL, "name" TEXT NOT NULL, "address" TEXT, "city" TEXT, "state" TEXT, "zipCode" TEXT, "phone" TEXT, "email" TEXT, "openingHours" TEXT, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "libraries_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "users" ("id" TEXT NOT NULL, "username" TEXT NOT NULL, "passwordHash" TEXT NOT NULL, "mustChangePassword" BOOLEAN NOT NULL DEFAULT true, "name" TEXT NOT NULL, "socialName" TEXT, "cpf" TEXT, "rg" TEXT, "birthDate" TEXT, "gender" TEXT, "email" TEXT NOT NULL, "phone" TEXT, "address" TEXT, "zipCode" TEXT, "city" TEXT, "state" TEXT, "country" TEXT DEFAULT 'Brasil', "registrationNumber" TEXT NOT NULL, "category" "BiblioGestPatronCategory" NOT NULL DEFAULT 'ALUNO', "libraryId" TEXT, "roleId" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "validUntil" TIMESTAMP(3), "isActive" BOOLEAN NOT NULL DEFAULT true, "photoUrl" TEXT, "notes" TEXT, CONSTRAINT "users_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "role_permissions" ("roleId" TEXT NOT NULL, "permissionId" TEXT NOT NULL, CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("roleId", "permissionId"));
+CREATE TABLE "authorities" ("id" TEXT NOT NULL, "type" "BiblioGestAuthorityType" NOT NULL, "heading" TEXT NOT NULL, "seeAlso" TEXT, "notes" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "authorities_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "bibliographic_records" ("id" TEXT NOT NULL, "materialType" "BiblioGestMaterialType" NOT NULL DEFAULT 'LIVRO', "title" TEXT NOT NULL, "subtitle" TEXT, "authors" TEXT, "statementOfResp" TEXT, "publicationYear" INTEGER, "publisher" TEXT, "placeOfPublication" TEXT, "edition" TEXT, "isbn" TEXT, "issn" TEXT, "language" TEXT DEFAULT 'por', "summary" TEXT, "subjects" TEXT, "cddNotation" TEXT, "cduNotation" TEXT, "cutterNotation" TEXT, "callNumber" TEXT, "marcData" JSONB, "rdaData" JSONB, "coverUrl" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "bibliographic_records_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "bibliographic_authorities" ("biblioId" TEXT NOT NULL, "authorityId" TEXT NOT NULL, CONSTRAINT "bibliographic_authorities_pkey" PRIMARY KEY ("biblioId", "authorityId"));
+CREATE TABLE "items" ("id" TEXT NOT NULL, "barcode" TEXT NOT NULL, "tombo" TEXT NOT NULL, "biblioId" TEXT NOT NULL, "libraryId" TEXT NOT NULL, "location" TEXT, "shelf" TEXT, "status" "BiblioGestItemStatus" NOT NULL DEFAULT 'DISPONIVEL', "callNumber" TEXT, "acquisitionDate" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP, "price" DOUBLE PRECISION, "source" TEXT, "notes" TEXT, CONSTRAINT "items_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "circulation_rules" ("id" TEXT NOT NULL, "userCategory" "BiblioGestPatronCategory" NOT NULL, "materialType" "BiblioGestMaterialType" NOT NULL, "maxLoans" INTEGER NOT NULL DEFAULT 3, "loanDays" INTEGER NOT NULL DEFAULT 7, "maxRenewals" INTEGER NOT NULL DEFAULT 2, "finePerDay" DOUBLE PRECISION NOT NULL DEFAULT 1.00, "gracePeriodDays" INTEGER NOT NULL DEFAULT 0, "isHoldAllowed" BOOLEAN NOT NULL DEFAULT true, CONSTRAINT "circulation_rules_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "loans" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "itemId" TEXT NOT NULL, "checkoutDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "dueDate" TIMESTAMP(3) NOT NULL, "returnDate" TIMESTAMP(3), "renewalCount" INTEGER NOT NULL DEFAULT 0, "status" "BiblioGestLoanStatus" NOT NULL DEFAULT 'ATIVO', "notes" TEXT, CONSTRAINT "loans_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "reservations" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "biblioId" TEXT NOT NULL, "itemId" TEXT, "requestDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "expiryDate" TIMESTAMP(3), "status" "BiblioGestReservationStatus" NOT NULL DEFAULT 'AGUARDANDO', CONSTRAINT "reservations_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "fines" ("id" TEXT NOT NULL, "userId" TEXT NOT NULL, "loanId" TEXT, "amount" DOUBLE PRECISION NOT NULL, "status" "BiblioGestFineStatus" NOT NULL DEFAULT 'PENDENTE', "reason" TEXT, "issuedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "paidAt" TIMESTAMP(3), CONSTRAINT "fines_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "serials" ("id" TEXT NOT NULL, "issn" TEXT NOT NULL, "title" TEXT NOT NULL, "publisher" TEXT, "frequency" TEXT, "location" TEXT, "notes" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "serials_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "serial_issues" ("id" TEXT NOT NULL, "serialId" TEXT NOT NULL, "volume" TEXT, "number" TEXT, "year" INTEGER, "publishedAt" TIMESTAMP(3), "receivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "notes" TEXT, CONSTRAINT "serial_issues_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "acquisitions" ("id" TEXT NOT NULL, "title" TEXT NOT NULL, "author" TEXT, "isbn" TEXT, "supplier" TEXT, "acquisitionType" TEXT NOT NULL, "quantity" INTEGER NOT NULL DEFAULT 1, "unitValue" DOUBLE PRECISION, "totalValue" DOUBLE PRECISION, "invoiceNumber" TEXT, "receivedDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "notes" TEXT, CONSTRAINT "acquisitions_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "disposals" ("id" TEXT NOT NULL, "itemId" TEXT NOT NULL, "reason" TEXT NOT NULL, "authorizedBy" TEXT NOT NULL, "disposalDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "destination" TEXT, "notes" TEXT, CONSTRAINT "disposals_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "inventory_scans" ("id" TEXT NOT NULL, "sessionId" TEXT NOT NULL, "libraryId" TEXT NOT NULL, "barcodeScanned" TEXT NOT NULL, "scannedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "statusFound" TEXT NOT NULL, CONSTRAINT "inventory_scans_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "audit_logs" ("id" TEXT NOT NULL, "userId" TEXT, "action" TEXT NOT NULL, "module" TEXT NOT NULL, "recordId" TEXT, "ipAddress" TEXT, "result" TEXT, "details" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "system_settings" ("id" TEXT NOT NULL, "key" TEXT NOT NULL, "value" TEXT NOT NULL, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "system_settings_pkey" PRIMARY KEY ("id"));
+
+CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
+CREATE UNIQUE INDEX "users_cpf_key" ON "users"("cpf");
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX "users_registrationNumber_key" ON "users"("registrationNumber");
+CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
+CREATE UNIQUE INDEX "permissions_code_key" ON "permissions"("code");
+CREATE UNIQUE INDEX "libraries_code_key" ON "libraries"("code");
+CREATE UNIQUE INDEX "items_barcode_key" ON "items"("barcode");
+CREATE UNIQUE INDEX "items_tombo_key" ON "items"("tombo");
+CREATE UNIQUE INDEX "circulation_rules_userCategory_materialType_key" ON "circulation_rules"("userCategory", "materialType");
+CREATE UNIQUE INDEX "serials_issn_key" ON "serials"("issn");
+CREATE UNIQUE INDEX "system_settings_key_key" ON "system_settings"("key");
+
+ALTER TABLE "users" ADD CONSTRAINT "users_libraryId_fkey" FOREIGN KEY ("libraryId") REFERENCES "libraries"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "users" ADD CONSTRAINT "users_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "bibliographic_authorities" ADD CONSTRAINT "bibliographic_authorities_biblioId_fkey" FOREIGN KEY ("biblioId") REFERENCES "bibliographic_records"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "bibliographic_authorities" ADD CONSTRAINT "bibliographic_authorities_authorityId_fkey" FOREIGN KEY ("authorityId") REFERENCES "authorities"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "items" ADD CONSTRAINT "items_biblioId_fkey" FOREIGN KEY ("biblioId") REFERENCES "bibliographic_records"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "items" ADD CONSTRAINT "items_libraryId_fkey" FOREIGN KEY ("libraryId") REFERENCES "libraries"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "loans" ADD CONSTRAINT "loans_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "loans" ADD CONSTRAINT "loans_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_biblioId_fkey" FOREIGN KEY ("biblioId") REFERENCES "bibliographic_records"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "fines" ADD CONSTRAINT "fines_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fines" ADD CONSTRAINT "fines_loanId_fkey" FOREIGN KEY ("loanId") REFERENCES "loans"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "serial_issues" ADD CONSTRAINT "serial_issues_serialId_fkey" FOREIGN KEY ("serialId") REFERENCES "serials"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "disposals" ADD CONSTRAINT "disposals_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

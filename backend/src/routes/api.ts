@@ -14,12 +14,14 @@ import * as invCtrl from '../controllers/inventoryController';
 import * as repCtrl from '../controllers/reportController';
 import * as dbCtrl from '../controllers/databaseController';
 import * as setupCtrl from '../controllers/setupController';
+import * as settingsCtrl from '../controllers/settingsController';
 
 const router = Router();
 
 // Public Setup & Auth endpoints
 router.get('/setup/status', setupCtrl.checkSystemSetupStatus);
 router.post('/auth/login', authCtrl.login);
+router.get('/opac/settings', settingsCtrl.getPublicLibraryIdentity);
 
 // Public OPAC Catalog search endpoints
 router.get('/opac/catalog', catCtrl.listCatalog);
@@ -45,6 +47,9 @@ router.get('/permissions', requirePermission('users.view'), userCtrl.listPermiss
 router.get('/libraries', libCtrl.listLibraries);
 router.post('/libraries', requirePermission('settings.edit'), libCtrl.createLibrary);
 router.put('/libraries/:id', requirePermission('settings.edit'), libCtrl.updateLibrary);
+router.delete('/libraries/:id', requirePermission('settings.edit'), libCtrl.deleteLibrary);
+router.get('/settings', requirePermission('settings.view'), settingsCtrl.getSettings);
+router.put('/settings', requirePermission('settings.edit'), settingsCtrl.updateSettings);
 
 // Cataloging (MARC21 / RDA / CDD)
 router.get('/catalog', catCtrl.listCatalog);
@@ -62,6 +67,7 @@ router.post('/authorities', requirePermission('catalog.create'), authRecordCtrl.
 // Items (Exemplares)
 router.get('/items', itemCtrl.listItems);
 router.get('/items/barcode/:barcode', itemCtrl.getItemByBarcode);
+router.get('/items/labels', requirePermission('catalog.view'), itemCtrl.getItemLabels);
 router.post('/items', requirePermission('catalog.create'), itemCtrl.createItem);
 router.put('/items/:id', requirePermission('catalog.edit'), itemCtrl.updateItem);
 
@@ -101,5 +107,6 @@ router.get('/reports/overdue', requirePermission('reports.view'), repCtrl.getOve
 router.post('/database/test-connection', requirePermission('settings.view'), dbCtrl.testDatabaseConnection);
 router.get('/database/backup', requirePermission('database.backup'), dbCtrl.exportBackup);
 router.post('/database/restore', requirePermission('database.restore'), dbCtrl.restoreBackup);
+router.post('/database/import', requirePermission('database.import'), dbCtrl.importCollaborativeData);
 
 export default router;

@@ -110,3 +110,20 @@ export async function getItemByBarcode(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao buscar exemplar.' });
   }
 }
+
+export async function getItemLabels(req: AuthRequest, res: Response) {
+  try {
+    const ids = typeof req.query.ids === 'string' ? req.query.ids.split(',').filter(Boolean) : [];
+    const biblioId = typeof req.query.biblioId === 'string' ? req.query.biblioId : undefined;
+    if (!ids.length && !biblioId) return res.status(400).json({ error: 'Informe os exemplares ou a obra para gerar as etiquetas.' });
+
+    const items = await prisma.item.findMany({
+      where: ids.length ? { id: { in: ids } } : { biblioId },
+      include: { biblio: true, library: true },
+      orderBy: { barcode: 'asc' },
+    });
+    return res.json(items);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao gerar dados das etiquetas: ' + err.message });
+  }
+}

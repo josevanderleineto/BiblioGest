@@ -15,3 +15,11 @@
    RESTAURAR
    ```
 4. Clique em **Executar Restauração de Dados**.
+
+> A restauração substitui os dados do esquema atual do BiblioGest pelo conteúdo do backup. Antes de continuar, gere e guarde uma cópia recente.
+
+---
+
+## 3. Importação colaborativa
+
+Para incorporar dados recebidos de outra unidade sem apagar o acervo local, selecione o arquivo JSON na seção **Importação colaborativa** e clique em **Importar sem substituir**. Registros que já existam são preservados.

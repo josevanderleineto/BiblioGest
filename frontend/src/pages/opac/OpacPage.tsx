@@ -11,6 +11,7 @@ export const OpacPage: React.FC = () => {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<BibliographicRecord | null>(null);
+  const [identity, setIdentity] = useState({ LIBRARY_NAME: 'BiblioGest', OPAC_DESCRIPTION: 'Pesquisa e Consulta Integrada do Acervo Bibliográfico' });
 
   const { theme, toggleTheme } = useTheme();
 
@@ -33,6 +34,7 @@ export const OpacPage: React.FC = () => {
 
   useEffect(() => {
     fetchCatalog();
+    api.get('/opac/settings').then((res) => setIdentity((current) => ({ ...current, ...res.data }))).catch(() => undefined);
   }, [materialType, availableOnly]);
 
   return (
@@ -45,8 +47,8 @@ export const OpacPage: React.FC = () => {
               B
             </div>
             <div>
-              <h1 className="text-xl font-extrabold tracking-tight">BiblioGest — Catálogo Público (OPAC)</h1>
-              <p className="text-xs text-brand-200">Pesquisa e Consulta Integrada do Acervo Bibliográfico</p>
+              <h1 className="text-xl font-extrabold tracking-tight">{identity.LIBRARY_NAME || 'BiblioGest'} — Catálogo Público</h1>
+              <p className="text-xs text-brand-200">{identity.OPAC_DESCRIPTION || 'Pesquisa e Consulta Integrada do Acervo Bibliográfico'}</p>
             </div>
           </div>
 

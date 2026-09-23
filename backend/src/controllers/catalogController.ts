@@ -108,9 +108,13 @@ export async function createCatalogRecord(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'O título principal da obra é obrigatório.' });
     }
 
+    // The basic catalog form is the source of truth for title and responsibility.
+    // Keep its MARC 245 synchronized so users do not need to type the title twice.
+    const normalizedMarcData = normalizeMarcData(marcData, title, authors);
+
     // Validate MARC21 if provided
-    if (marcData && Array.isArray(marcData)) {
-      const validation = validateMarcRecord(marcData);
+    if (normalizedMarcData && Array.isArray(normalizedMarcData)) {
+      const validation = validateMarcRecord(normalizedMarcData);
       if (!validation.valid) {
         return res.status(400).json({ error: 'Erros de validação MARC21', details: validation.errors });
       }
@@ -145,7 +149,7 @@ export async function createCatalogRecord(req: AuthRequest, res: Response) {
         cutterNotation,
         callNumber: generatedCallNumber,
         coverUrl,
-        marcData,
+        marcData: normalizedMarcData,
         rdaData,
       },
     });
@@ -154,6 +158,24 @@ export async function createCatalogRecord(req: AuthRequest, res: Response) {
   } catch (err: any) {
     return res.status(500).json({ error: 'Erro ao catalogar obra: ' + err.message });
   }
+}
+
+function normalizeMarcData(marcData: unknown, title: string, authors?: string) {
+  if (!Array.isArray(marcData)) return marcData;
+  const fields = marcData.map((field: any) => ({ ...field, subfields: Array.isArray(field.subfields) ? field.subfields.map((subfield: any) => ({ ...subfield })) : [] }));
+  let titleField = fields.find((field: any) => field.tag === '245');
+  if (!titleField) {
+    titleField = { tag: '245', ind1: '1', ind2: '0', subfields: [] };
+    fields.push(titleField);
+  }
+  const titleSubfield = titleField.subfields.find((subfield: any) => subfield.code === 'a');
+  if (titleSubfield) titleSubfield.value = title;
+  else titleField.subfields.unshift({ code: 'a', value: title });
+
+  const authorField = fields.find((field: any) => field.tag === '100');
+  const authorSubfield = authorField?.subfields?.find((subfield: any) => subfield.code === 'a');
+  if (authorSubfield && !authorSubfield.value?.trim() && authors) authorSubfield.value = authors;
+  return fields;
 }
 
 export async function updateCatalogRecord(req: AuthRequest, res: Response) {

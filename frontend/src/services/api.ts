@@ -20,7 +20,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+    const authError = error.response?.status === 401 ||
+      (error.response?.status === 403 && /usuário inativo|usuário.*encontrado|token inválido/i.test(error.response?.data?.error || ''));
+    if (authError && !window.location.pathname.includes('/login')) {
       localStorage.removeItem('bibliogest_token');
       localStorage.removeItem('bibliogest_user');
       window.location.href = '/login';

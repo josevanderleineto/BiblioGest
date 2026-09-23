@@ -59,13 +59,13 @@ npm run start
 
 Acesse a aplicação no navegador em: `http://localhost:3000`.
 
-> **Nota**: Na primeira execução, o BiblioGest detectará o banco de dados e executará a criação das tabelas e a inserção dos dados iniciais (Seed) automaticamente!
+> **Nota**: A aplicação nunca altera a estrutura do banco automaticamente. Após configurar a conexão, execute uma vez `npm run db:setup --prefix backend`. Isso aplica as migrações e cria os dados iniciais sem apagar tabelas já existentes.
 
 ---
 
 ## 🗄️ Configuração do Banco de Dados (Local vs Nuvem)
 
-Abra o arquivo `.env` e configure conforme sua preferência:
+Abra `backend/.env` e mantenha somente uma `DATABASE_URL` ativa. O arquivo já inclui uma alternativa local comentada para facilitar a troca.
 
 ### Opção A: PostgreSQL Local (Recomendado)
 ```env
@@ -78,11 +78,12 @@ Basta colar a string de conexão fornecida pelo seu provedor de nuvem:
 DATABASE_URL="postgresql://usuario:senha@ep-exemplo.us-east-2.aws.neon.tech/bibliogest?sslmode=require"
 ```
 
-### Opção C: SQLite Local (Zero Instalação - Sem PostgreSQL)
-Para rodar instantaneamente sem instalar nenhum servidor de banco de dados:
-```env
-DATABASE_URL="file:../database/bibliogest.db"
+Depois de configurar a URL, instale a estrutura de forma segura:
+```bash
+npm run db:setup --prefix backend
 ```
+
+Em bancos que já possuam tabelas de versões antigas, a primeira migração é aditiva: ela preserva as tabelas existentes e cria as tabelas usadas pelo BiblioGest atual.
 
 ---
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -23,12 +23,18 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 export const Sidebar: React.FC = () => {
   const { hasPermission } = useAuth();
   const [openCatalog, setOpenCatalog] = useState(true);
   const [openCirculation, setOpenCirculation] = useState(true);
   const [openUsers, setOpenUsers] = useState(false);
+  const [identity, setIdentity] = useState({ LIBRARY_NAME: 'BiblioGest', INFORMATION_UNIT_NAME: 'Gestão Bibliotecária' });
+
+  useEffect(() => {
+    api.get('/settings').then((res) => setIdentity((current) => ({ ...current, ...res.data }))).catch(() => undefined);
+  }, []);
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 min-h-screen select-none">
@@ -38,8 +44,8 @@ export const Sidebar: React.FC = () => {
           B
         </div>
         <div>
-          <h1 className="font-bold text-white text-lg tracking-tight leading-tight">BiblioGest</h1>
-          <span className="text-xs text-brand-400 font-medium">Gestão Bibliotecária</span>
+          <h1 className="font-bold text-white text-lg tracking-tight leading-tight truncate max-w-[170px]">{identity.LIBRARY_NAME || 'BiblioGest'}</h1>
+          <span className="text-xs text-brand-400 font-medium truncate max-w-[170px]">{identity.INFORMATION_UNIT_NAME || 'Gestão Bibliotecária'}</span>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import { Loan } from '../../types';
 import { ArrowRightLeft, CheckCircle2, RotateCcw, Barcode, UserCheck, AlertTriangle, Receipt } from 'lucide-react';
@@ -7,10 +7,12 @@ export const CirculationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'checkout' | 'return' | 'loans'>('checkout');
 
   // Checkout state
-  const [regNum, setRegNum] = useState('202410050');
+  const [regNum, setRegNum] = useState('');
   const [checkoutBarcode, setCheckoutBarcode] = useState('');
   const [checkoutMsg, setCheckoutMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const checkoutBarcodeRef = useRef<HTMLInputElement>(null);
+  const returnBarcodeRef = useRef<HTMLInputElement>(null);
 
   // Return state
   const [returnBarcode, setReturnBarcode] = useState('');
@@ -35,14 +37,15 @@ export const CirculationPage: React.FC = () => {
 
     try {
       const res = await api.post('/circulation/checkout', {
-        registrationNumber: regNum,
-        barcode: checkoutBarcode,
+        registrationNumber: regNum.trim(),
+        barcode: checkoutBarcode.trim(),
       });
       setCheckoutMsg({
         type: 'success',
         text: `✓ Empréstimo realizado com sucesso! Vencimento: ${new Date(res.data.dueDate).toLocaleDateString('pt-BR')}`,
       });
       setCheckoutBarcode('');
+      checkoutBarcodeRef.current?.focus();
       fetchLoans();
     } catch (err: any) {
       setCheckoutMsg({
@@ -61,7 +64,7 @@ export const CirculationPage: React.FC = () => {
 
     try {
       const res = await api.post('/circulation/return', {
-        barcode: returnBarcode,
+        barcode: returnBarcode.trim(),
       });
       setReturnMsg({
         type: 'success',
@@ -69,6 +72,7 @@ export const CirculationPage: React.FC = () => {
         details: res.data,
       });
       setReturnBarcode('');
+      returnBarcodeRef.current?.focus();
       fetchLoans();
     } catch (err: any) {
       setReturnMsg({
@@ -104,7 +108,7 @@ export const CirculationPage: React.FC = () => {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-700">
         <button
-          onClick={() => setActiveTab('checkout')}
+          onClick={() => { setActiveTab('checkout'); setTimeout(() => checkoutBarcodeRef.current?.focus(), 0); }}
           className={`px-5 py-2.5 font-bold text-sm border-b-2 transition-all ${
             activeTab === 'checkout'
               ? 'border-brand-500 text-brand-600 dark:text-brand-400'
@@ -114,7 +118,7 @@ export const CirculationPage: React.FC = () => {
           Realizar Empréstimo
         </button>
         <button
-          onClick={() => setActiveTab('return')}
+          onClick={() => { setActiveTab('return'); setTimeout(() => returnBarcodeRef.current?.focus(), 0); }}
           className={`px-5 py-2.5 font-bold text-sm border-b-2 transition-all ${
             activeTab === 'return'
               ? 'border-brand-500 text-brand-600 dark:text-brand-400'
@@ -158,13 +162,17 @@ export const CirculationPage: React.FC = () => {
           <form onSubmit={handleCheckoutSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                Matrícula, CPF ou Username do Usuário
+                Matrícula, CPF ou usuário do leitor
               </label>
               <input
                 type="text"
                 required
+                autoFocus
                 value={regNum}
                 onChange={(e) => setRegNum(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); checkoutBarcodeRef.current?.focus(); }
+                }}
                 placeholder="Ex: 202410050"
                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm dark:text-white font-mono"
               />
@@ -179,9 +187,13 @@ export const CirculationPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  autoFocus
+                  ref={checkoutBarcodeRef}
                   value={checkoutBarcode}
                   onChange={(e) => setCheckoutBarcode(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Leitores USB enviam o código como teclado e finalizam com Enter.
+                    if (e.key === 'Enter' && regNum.trim() && checkoutBarcode.trim()) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement)?.requestSubmit(); }
+                  }}
                   placeholder="Ex: 100001"
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm dark:text-white font-mono font-bold text-brand-600 dark:text-brand-400"
                 />
@@ -227,16 +239,19 @@ export const CirculationPage: React.FC = () => {
           <form onSubmit={handleReturnSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                Bipar Código de Barras do Exemplar
+                Bipar ou digitar código de barras do exemplar
               </label>
               <div className="relative">
                 <Barcode className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
-                  autoFocus
+                  ref={returnBarcodeRef}
                   value={returnBarcode}
                   onChange={(e) => setReturnBarcode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && returnBarcode.trim()) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement)?.requestSubmit(); }
+                  }}
                   placeholder="Ex: 100001"
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm dark:text-white font-mono font-bold text-indigo-600 dark:text-indigo-400"
                 />

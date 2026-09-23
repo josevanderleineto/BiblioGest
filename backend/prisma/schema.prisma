@@ -15,6 +15,8 @@ enum PatronCategory {
   COMUNIDADE
   VISITANTE
   OUTRO
+
+  @@map("BiblioGestPatronCategory")
 }
 
 enum MaterialType {
@@ -31,6 +33,8 @@ enum MaterialType {
   DOCUMENTO
   OBRA_RARA
   OUTROS
+
+  @@map("BiblioGestMaterialType")
 }
 
 enum ItemStatus {
@@ -41,12 +45,16 @@ enum ItemStatus {
   EXTRAVIADO
   DESCARTADO
   PERDIDO
+
+  @@map("BiblioGestItemStatus")
 }
 
 enum LoanStatus {
   ATIVO
   DEVOLVIDO
   ATRASADO
+
+  @@map("BiblioGestLoanStatus")
 }
 
 enum ReservationStatus {
@@ -55,12 +63,16 @@ enum ReservationStatus {
   ATENDIDA
   CANCELADA
   EXPIRADA
+
+  @@map("BiblioGestReservationStatus")
 }
 
 enum FineStatus {
   PENDENTE
   PAGO
   CANCELADO
+
+  @@map("BiblioGestFineStatus")
 }
 
 enum AuthorityType {
@@ -71,6 +83,8 @@ enum AuthorityType {
   SERIE
   TITULO_UNIFORME
   TERMO_GEOGRAFICO
+
+  @@map("BiblioGestAuthorityType")
 }
 
 model User {

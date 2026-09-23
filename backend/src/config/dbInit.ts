@@ -1,5 +1,3 @@
-import { execSync } from 'child_process';
-import path from 'path';
 import { prisma } from './prisma';
 import { ENV } from './env';
 
@@ -14,61 +12,24 @@ export async function initDatabase() {
   console.log(`🔍 Checando banco de dados (${isCloud ? 'Nuvem PostgreSQL' : 'PostgreSQL Local'})...`);
 
   try {
-    // 1. Tentar realizar query simples para verificar se tabelas existem
+    // A conexão deve ser testada sem consultar uma tabela da aplicação: ela pode
+    // ainda não existir em uma instalação nova.
+    await prisma.$queryRaw`SELECT 1`;
+    const tables: Array<{ users: string | null }> = await prisma.$queryRaw`
+      SELECT to_regclass('public.users')::text AS users
+    `;
+
+    if (!tables[0]?.users) {
+      console.warn('⚠️ As tabelas do BiblioGest ainda não foram instaladas. Nenhuma alteração foi feita automaticamente.');
+      console.warn('   Execute "npm run db:migrate --prefix backend" para instalar a estrutura com segurança.');
+      return;
+    }
+
     const userCount = await prisma.user.count();
     console.log(`✅ Banco de dados conectado com sucesso! Total de usuários cadastrados: ${userCount}`);
-    
-    if (userCount === 0) {
-      console.log('🌱 Banco conectado porém sem registros. Executando seed inicial...');
-      runSeed();
-    }
   } catch (error: any) {
-    console.log('⚠️ Estrutura de tabelas pendente. Inicializando banco de dados...');
-    
-    try {
-      const backendDir = path.resolve(process.cwd());
-      
-      console.log('⚙️ Gerando cliente Prisma e sincronizando tabelas...');
-      execSync('npx prisma generate', {
-        cwd: backendDir,
-        stdio: 'inherit',
-        env: { ...process.env, DATABASE_URL: ENV.DATABASE_URL },
-      });
-      
-      try {
-        execSync('npx prisma db push', {
-          cwd: backendDir,
-          stdio: 'inherit',
-          env: { ...process.env, DATABASE_URL: ENV.DATABASE_URL },
-        });
-      } catch (pushErr) {
-        execSync('npx prisma migrate deploy', {
-          cwd: backendDir,
-          stdio: 'inherit',
-          env: { ...process.env, DATABASE_URL: ENV.DATABASE_URL },
-        });
-      }
-
-      console.log('🌱 Executando povoamento inicial de dados (Seed)...');
-      runSeed();
-      console.log('🎉 Banco de dados inicializado e configurado com sucesso!');
-    } catch (initErr: any) {
-      console.error('❌ Falha ao inicializar banco de dados automaticamente:', initErr.message);
-      console.log('💡 Dica: Verifique se o serviço PostgreSQL está rodando localmente ou se a string do .env está correta.');
-    }
+    console.error('❌ Não foi possível validar o banco de dados:', error.message);
+    console.log('💡 Confirme a DATABASE_URL no arquivo backend/.env e execute a migração manualmente quando necessário.');
   }
   console.log('-------------------------------------------------------');
-}
-
-function runSeed() {
-  const backendDir = path.resolve(process.cwd());
-  try {
-    execSync('npx ts-node prisma/seed.ts', {
-      cwd: backendDir,
-      stdio: 'inherit',
-      env: { ...process.env, DATABASE_URL: ENV.DATABASE_URL },
-    });
-  } catch (e: any) {
-    console.error('⚠️ Erro ao executar seed:', e.message);
-  }
 }

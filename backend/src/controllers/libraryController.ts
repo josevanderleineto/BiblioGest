@@ -46,3 +46,24 @@ export async function updateLibrary(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: 'Erro ao atualizar biblioteca.' });
   }
 }
+
+export async function deleteLibrary(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const [users, items] = await Promise.all([
+      prisma.user.count({ where: { libraryId: id } }),
+      prisma.item.count({ where: { libraryId: id } }),
+    ]);
+
+    if (users || items) {
+      return res.status(409).json({
+        error: `Esta unidade possui ${users} usuário(s) e ${items} exemplar(es) vinculados. Transfira-os ou inative a unidade antes de removê-la.`,
+      });
+    }
+
+    await prisma.library.delete({ where: { id } });
+    return res.json({ message: 'Unidade removida com sucesso.' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Erro ao remover unidade: ' + err.message });
+  }
+}

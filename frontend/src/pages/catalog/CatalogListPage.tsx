@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { BibliographicRecord } from '../../types';
-import { BookOpen, Plus, Search, Filter, Download, Trash2, Edit3, Layers, BookPlus } from 'lucide-react';
+import { BookOpen, Search, Trash2, Edit3, BookPlus, Tag } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export const CatalogListPage: React.FC = () => {
   const [records, setRecords] = useState<BibliographicRecord[]>([]);
@@ -12,6 +13,7 @@ export const CatalogListPage: React.FC = () => {
   const [materialType, setMaterialType] = useState('');
 
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
 
   const fetchCatalog = async () => {
     setLoading(true);
@@ -59,13 +61,13 @@ export const CatalogListPage: React.FC = () => {
           <p className="text-xs text-slate-500">Gestão de registros catalogados em MARC21, RDA e Classificação CDD/CDU</p>
         </div>
 
-        <button
+        {hasPermission('catalog.create') && <button
           onClick={() => navigate('/catalog/new')}
           className="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl shadow-md shadow-brand-500/20 transition-all text-sm flex items-center gap-2"
         >
           <BookPlus className="w-4 h-4" />
           <span>Nova Catalogação</span>
-        </button>
+        </button>}
       </div>
 
       {/* Search & Filter bar */}
@@ -144,20 +146,20 @@ export const CatalogListPage: React.FC = () => {
                     <td className="p-3">{rec.isbn || rec.issn || '-'}</td>
                     <td className="p-3 font-bold text-brand-600">{rec.items?.length || 0}</td>
                     <td className="p-3 text-right space-x-1">
-                      <button
+                      {hasPermission('catalog.edit') && <button
                         onClick={() => handleExport(rec.id, 'marc')}
                         className="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-semibold"
                         title="Exportar MARC21 Text"
                       >
                         MARC
-                      </button>
-                      <button
+                      </button>}
+                      {hasPermission('catalog.delete') && <button
                         onClick={() => handleExport(rec.id, 'ris')}
                         className="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded text-[10px] font-semibold"
                         title="Exportar RIS"
                       >
                         RIS
-                      </button>
+                      </button>}
                       <button
                         onClick={() => navigate(`/catalog/edit/${rec.id}`)}
                         className="p-1 text-slate-400 hover:text-brand-600"
@@ -165,6 +167,13 @@ export const CatalogListPage: React.FC = () => {
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
+                      {(rec.items?.length || 0) > 0 && <button
+                        onClick={() => navigate(`/catalog/labels?biblioId=${rec.id}`)}
+                        className="p-1 text-slate-400 hover:text-indigo-600"
+                        title="Gerar etiquetas dos exemplares"
+                      >
+                        <Tag className="w-4 h-4" />
+                      </button>}
                       <button
                         onClick={() => handleDelete(rec.id)}
                         className="p-1 text-slate-400 hover:text-rose-600"

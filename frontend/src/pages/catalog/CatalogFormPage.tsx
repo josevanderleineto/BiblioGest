@@ -136,7 +136,8 @@ export const CatalogFormPage: React.FC = () => {
         }
       }
 
-      navigate('/catalog');
+      // Ao cadastrar exemplares, siga diretamente para as etiquetas deles.
+      navigate(items.length > 0 ? `/catalog/labels?biblioId=${biblioId}` : '/catalog');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao salvar catalogação.');
     } finally {

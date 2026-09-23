@@ -7,36 +7,25 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting BiblioGest database seed...');
 
+  // Seed must never erase a configured library. It only prepares a brand-new
+  // BiblioGest schema; existing databases are left untouched.
+  const existingUser = await prisma.user.findFirst({ select: { id: true } });
+  if (existingUser) {
+    console.log('ℹ️ Dados do BiblioGest já existem. Seed ignorado para preservar os dados.');
+    return;
+  }
+
   if (!ENV.DEFAULT_ADMIN_USERNAME || !ENV.DEFAULT_ADMIN_PASSWORD) {
     throw new Error('Defina DEFAULT_ADMIN_USERNAME e DEFAULT_ADMIN_PASSWORD no arquivo .env antes de executar o seed.');
   }
 
-  // 1. Clear existing data in reverse order of dependencies
-  await prisma.auditLog.deleteMany();
-  await prisma.fine.deleteMany();
-  await prisma.loan.deleteMany();
-  await prisma.reservation.deleteMany();
-  await prisma.disposal.deleteMany();
-  await prisma.item.deleteMany();
-  await prisma.bibliographicAuthority.deleteMany();
-  await prisma.authority.deleteMany();
-  await prisma.bibliographicRecord.deleteMany();
-  await prisma.serialIssue.deleteMany();
-  await prisma.serial.deleteMany();
-  await prisma.acquisition.deleteMany();
-  await prisma.inventoryScan.deleteMany();
-  await prisma.circulationRule.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.rolePermission.deleteMany();
-  await prisma.permission.deleteMany();
-  await prisma.role.deleteMany();
-  await prisma.library.deleteMany();
-  await prisma.systemSetting.deleteMany();
-
-  // 2. System Settings
+  // 1. System Settings
   await prisma.systemSetting.createMany({
     data: [
       { key: 'SYSTEM_NAME', value: 'BiblioGest - Sistema Integrado de Biblioteca' },
+      { key: 'LIBRARY_NAME', value: 'Biblioteca Central' },
+      { key: 'INFORMATION_UNIT_NAME', value: 'Unidade de Informação' },
+      { key: 'OPAC_DESCRIPTION', value: 'Catálogo público da biblioteca.' },
       { key: 'DEFAULT_LANGUAGE', value: 'pt-BR' },
       { key: 'DATABASE_MODE', value: 'PostgreSQL' },
       { key: 'CUTTER_RULE', value: 'Sanborn' },
@@ -45,7 +34,7 @@ async function main() {
     ],
   });
 
-  // 3. Permissions
+  // 2. Permissions
   const permissionsData = [
     { code: 'users.view', name: 'Visualizar Usuários', category: 'Usuários', description: 'Permite consultar lista e perfil de usuários.' },
     { code: 'users.create', name: 'Cadastrar Usuários', category: 'Usuários', description: 'Permite criar novos usuários no sistema.' },
@@ -66,13 +55,14 @@ async function main() {
     { code: 'settings.edit', name: 'Editar Configurações', category: 'Administração', description: 'Permite alterar regras e parâmetros.' },
     { code: 'database.backup', name: 'Gerar Backup', category: 'Banco de Dados', description: 'Permite exportar cópia de segurança.' },
     { code: 'database.restore', name: 'Restaurar Backup', category: 'Banco de Dados', description: 'Permite importar cópia de segurança.' },
+    { code: 'database.import', name: 'Importar Dados Colaborativos', category: 'Banco de Dados', description: 'Permite incorporar dados sem apagar o acervo existente.' },
   ];
 
   const createdPermissions = await Promise.all(
     permissionsData.map((p) => prisma.permission.create({ data: p }))
   );
 
-  // 4. Roles
+  // 3. Roles
   const adminRole = await prisma.role.create({
     data: {
       name: 'Administrador',
@@ -125,7 +115,16 @@ async function main() {
     )
   );
 
-  // 5. Libraries (Unidades)
+  // A conta de atendimento pode consultar o acervo e realizar a circulação,
+  // sem ter permissão para alterar a catalogação ou as configurações.
+  const assistantPermCodes = ['catalog.view', 'circulation.checkout', 'circulation.return', 'circulation.renew'];
+  await Promise.all(
+    createdPermissions.filter((p) => assistantPermCodes.includes(p.code)).map((p) =>
+      prisma.rolePermission.create({ data: { roleId: assistantRole.id, permissionId: p.id } })
+    )
+  );
+
+  // 4. Libraries (Unidades)
   const libCentral = await prisma.library.create({
     data: {
       code: 'BIB-CENTRAL',

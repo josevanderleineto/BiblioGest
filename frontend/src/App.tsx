@@ -13,6 +13,7 @@ import { OpacPage } from './pages/opac/OpacPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { CatalogListPage } from './pages/catalog/CatalogListPage';
 import { CatalogFormPage } from './pages/catalog/CatalogFormPage';
+import { ItemLabelsPage } from './pages/catalog/ItemLabelsPage';
 import { CirculationPage } from './pages/circulation/CirculationPage';
 import { FinesPage } from './pages/circulation/FinesPage';
 import { PatronListPage } from './pages/patrons/PatronListPage';
@@ -60,6 +61,7 @@ export const App: React.FC = () => {
             <Route path="/catalog" element={<ProtectedLayout><CatalogListPage /></ProtectedLayout>} />
             <Route path="/catalog/new" element={<ProtectedLayout><CatalogFormPage /></ProtectedLayout>} />
             <Route path="/catalog/edit/:id" element={<ProtectedLayout><CatalogFormPage /></ProtectedLayout>} />
+            <Route path="/catalog/labels" element={<ProtectedLayout><ItemLabelsPage /></ProtectedLayout>} />
             <Route path="/circulation" element={<ProtectedLayout><CirculationPage /></ProtectedLayout>} />
             <Route path="/circulation/fines" element={<ProtectedLayout><FinesPage /></ProtectedLayout>} />
             <Route path="/users" element={<ProtectedLayout><PatronListPage /></ProtectedLayout>} />
