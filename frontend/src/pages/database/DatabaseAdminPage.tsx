@@ -99,7 +99,7 @@ export const DatabaseAdminPage: React.FC = () => {
 
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
         <div className="flex items-center justify-between gap-4"><div><h2 className="font-bold text-sm text-slate-800 dark:text-slate-100 uppercase tracking-wider">Status da conexão PostgreSQL</h2><p className="text-xs text-slate-500 mt-1">Verifique a DATABASE_URL configurada no servidor.</p></div><button onClick={handleTestConnection} disabled={loadingTest} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg text-xs">{loadingTest ? 'Testando...' : 'Testar conexão'}</button></div>
-        {testResult && <div className={`p-4 rounded-xl text-sm font-medium border flex items-start gap-3 ${testResult.success ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-rose-50 text-rose-800 border-rose-300'}`}><CheckCircle2 className="w-5 h-5 shrink-0" /><div><div className="font-bold">{testResult.message}</div>{testResult.details && <div className="text-xs mt-1">Banco: {testResult.details.database} · Usuário: {testResult.details.user}</div>}</div></div>}
+        {testResult && <div className={`p-4 rounded-xl text-sm font-medium border flex items-start gap-3 ${testResult.success ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-rose-50 text-rose-800 border-rose-300'}`}><CheckCircle2 className="w-5 h-5 shrink-0" /><div><div className="font-bold">{testResult.message}</div></div></div>}
       </div>
 
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">

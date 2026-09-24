@@ -1,24 +1,91 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../../services/api';
-import { BookOpen, KeyRound, User, Lock, AlertCircle, Wrench } from 'lucide-react';
+import { BookOpen, User, Lock, AlertCircle } from 'lucide-react';
+
+type TurnstileApi = {
+  render: (container: HTMLElement, options: Record<string, unknown>) => string;
+  remove: (widgetId: string) => void;
+};
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi;
+  }
+}
+
+function loadTurnstile(): Promise<TurnstileApi> {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+
+  return new Promise((resolve, reject) => {
+    const existing = document.getElementById('cf-turnstile-script') as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => window.turnstile ? resolve(window.turnstile) : reject(new Error('Turnstile indisponível')), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Turnstile indisponível')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = 'cf-turnstile-script';
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = () => window.turnstile ? resolve(window.turnstile) : reject(new Error('Turnstile indisponível'));
+    script.onerror = () => reject(new Error('Turnstile indisponível'));
+    document.head.appendChild(script);
+  });
+}
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileError, setTurnstileError] = useState('');
+  const turnstileContainer = useRef<HTMLDivElement>(null);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!turnstileSiteKey || !turnstileContainer.current) return;
+
+    let active = true;
+    let widgetId: string | undefined;
+    loadTurnstile()
+      .then((turnstile) => {
+        if (!active || !turnstileContainer.current) return;
+        widgetId = turnstile.render(turnstileContainer.current, {
+          sitekey: turnstileSiteKey,
+          callback: (token: string) => {
+            setTurnstileToken(token);
+            setTurnstileError('');
+          },
+          'expired-callback': () => setTurnstileToken(''),
+          'error-callback': () => setTurnstileError('Não foi possível carregar a verificação de segurança.'),
+          theme: 'auto',
+        });
+      })
+      .catch(() => active && setTurnstileError('Não foi possível carregar a verificação de segurança.'));
+
+    return () => {
+      active = false;
+      if (widgetId && window.turnstile) window.turnstile.remove(widgetId);
+    };
+  }, [turnstileSiteKey]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (turnstileSiteKey && !turnstileToken) {
+      setError('Conclua a verificação de segurança para continuar.');
+      return;
+    }
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/login', { username, password });
+      const res = await api.post('/auth/login', { username, password, turnstileToken, website: '' });
       login(res.data.token, res.data.user, res.data.mustChangePassword);
       navigate('/dashboard');
     } catch (err: any) {
@@ -50,6 +117,14 @@ export const LoginPage: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="absolute h-px w-px -left-[10000px] opacity-0"
+          />
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
               Usuário, E-mail ou Matrícula
@@ -82,9 +157,12 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
+          {turnstileSiteKey && <div ref={turnstileContainer} className="flex justify-center" />}
+          {turnstileError && <p className="text-sm text-rose-600 dark:text-rose-300">{turnstileError}</p>}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || Boolean(turnstileSiteKey && !turnstileToken)}
             className="w-full py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold rounded-lg shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2"
           >
             {loading ? 'Autenticando...' : 'Acessar Sistema'}
@@ -94,17 +172,12 @@ export const LoginPage: React.FC = () => {
         {/* Initial login notice */}
         <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 text-center space-y-2">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            No primeiro acesso, use as credenciais definidas em <code>DEFAULT_ADMIN_USERNAME</code> e <code>DEFAULT_ADMIN_PASSWORD</code> no arquivo <code>.env</code>.
+            Use a conta criada pelo administrador do sistema. As credenciais nunca são exibidas nesta página.
           </p>
-          <div className="flex items-center justify-center gap-4 text-xs font-medium">
+          <div className="flex items-center justify-center text-xs font-medium">
             <Link to="/opac" className="text-brand-500 hover:underline flex items-center gap-1">
               <BookOpen className="w-3.5 h-3.5" />
               Catálogo Público (OPAC)
-            </Link>
-            <span className="text-slate-300">•</span>
-            <Link to="/setup" className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1">
-              <Wrench className="w-3.5 h-3.5" />
-              Assistente de Instalação
             </Link>
           </div>
         </div>

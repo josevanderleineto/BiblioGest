@@ -5,9 +5,9 @@ services:
     container_name: bibliogest-postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: bibliogest
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no arquivo .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB no arquivo .env}
     ports:
       - "5433:5432"
     volumes:
@@ -24,15 +24,17 @@ services:
       dockerfile: ./docker/Dockerfile.unified
     container_name: bibliogest-app
     restart: always
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/bibliogest?schema=public
-      JWT_SECRET: super_secret_jwt_key_change_in_production_bibliogest_2026
-      DEFAULT_ADMIN_USERNAME: admin
-      DEFAULT_ADMIN_PASSWORD: admin
+      DATABASE_URL: postgresql://${POSTGRES_USER:?Defina POSTGRES_USER no arquivo .env}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}@postgres:5432/${POSTGRES_DB:?Defina POSTGRES_DB no arquivo .env}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
+      DEFAULT_ADMIN_USERNAME: ${DEFAULT_ADMIN_USERNAME:?Defina DEFAULT_ADMIN_USERNAME no arquivo .env}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:?Defina DEFAULT_ADMIN_PASSWORD no arquivo .env}
     depends_on:
       postgres:
         condition: service_healthy

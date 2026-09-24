@@ -51,10 +51,11 @@ function validBackup(payload: BackupPayload | undefined): payload is Required<Pi
 
 export async function testDatabaseConnection(req: AuthRequest, res: Response) {
   try {
-    const result: any[] = await prisma.$queryRaw`SELECT version(), current_database(), current_user`;
-    return res.json({ success: true, message: '✓ Conexão realizada com sucesso.', details: { database: result[0]?.current_database || 'bibliogest', user: result[0]?.current_user || 'postgres', version: result[0]?.version || 'PostgreSQL' } });
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({ success: true, message: '✓ Conexão realizada com sucesso.' });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: '✕ Não foi possível conectar ao PostgreSQL.', error: err.message });
+    console.error('Database connection test failed:', err);
+    return res.status(500).json({ success: false, message: '✕ Não foi possível conectar ao PostgreSQL.' });
   }
 }
 

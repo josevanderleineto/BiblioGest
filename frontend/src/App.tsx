@@ -6,7 +6,6 @@ import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 
 import { LoginPage } from './pages/auth/LoginPage';
-import { SetupWizardPage } from './pages/auth/SetupWizardPage';
 import { ForcePasswordChangeModal } from './pages/auth/ForcePasswordChangeModal';
 import { OpacPage } from './pages/opac/OpacPage';
 
@@ -53,7 +52,6 @@ export const App: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/setup" element={<SetupWizardPage />} />
             <Route path="/opac" element={<OpacPage />} />
 
             {/* Protected System Routes */}

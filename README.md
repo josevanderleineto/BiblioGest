@@ -13,7 +13,7 @@ O **BiblioGest** é um sistema completo, moderno e de alta performance para auto
 - **Regras de Empréstimo Flexíveis**: Matriz configurável de regras por Categoria de Patrono (Aluno, Professor, Servidor, Pesquisador) x Tipo de Material.
 - **Multas & Pendências**: Cálculo automático de multas por dias de atraso com período de carência e histórico de quitação.
 - **Usuários & Permissões (RBAC)**: Autenticação JWT com controle de acesso baseado em funções (Administrador, Bibliotecário, Auxiliar, Catalogador).
-- **Troca de Senha Obrigatória**: Força alteração da credencial padrão inicial no primeiro login (`admin`/`admin`).
+- **Troca de Senha Obrigatória**: Força a alteração da senha inicial definida exclusivamente por variável de ambiente.
 - **Banco de Dados Flexível & Autogerado**:
   - **Local**: Criação, migração e semeadura automática do banco de dados no boot.
   - **Nuvem**: Conexão simples com provedores de nuvem (Neon, Supabase, Render, Railway, AWS RDS).
@@ -65,11 +65,11 @@ Acesse a aplicação no navegador em: `http://localhost:3000`.
 
 ## 🗄️ Configuração do Banco de Dados (Local vs Nuvem)
 
-Abra `backend/.env` e mantenha somente uma `DATABASE_URL` ativa. O arquivo já inclui uma alternativa local comentada para facilitar a troca.
+Defina `DATABASE_URL` somente no arquivo de ambiente correspondente. A interface web não recebe, exibe ou testa strings de conexão, usuários ou senhas do banco.
 
 ### Opção A: PostgreSQL Local (Recomendado)
 ```env
-DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5432/bibliogest?schema=public"
+DATABASE_URL="postgresql://USUARIO:SENHA@localhost:5432/bibliogest?schema=public"
 ```
 
 ### Opção B: Banco de Dados na Nuvem (Neon, Supabase, Render, Railway)
@@ -109,10 +109,16 @@ Acesse em: `http://localhost:3000`.
 
 ## 🔐 Credenciais Iniciais de Acesso
 
-Defina `DEFAULT_ADMIN_USERNAME` e `DEFAULT_ADMIN_PASSWORD` no `.env` antes da primeira inicialização. O seed cria o administrador com esses valores e exige a troca da senha no primeiro acesso.
+Defina `DEFAULT_ADMIN_USERNAME`, `DEFAULT_ADMIN_PASSWORD` e `JWT_SECRET` no `.env` antes da primeira inicialização. O seed cria o administrador com esses valores e exige a troca da senha no primeiro acesso. Não coloque esses valores em arquivos versionados, telas ou commits.
 
 Se o banco já foi inicializado e você alterou a variável de senha, aplique-a sem apagar os dados:
 
 ```bash
 npm run admin:reset-password
+```
+
+Com Docker Compose, após salvar a nova senha no `.env`, execute sem colocá-la na linha de comando:
+
+```bash
+docker compose run --rm --no-deps app node dist/scripts/resetAdminPassword.js
 ```

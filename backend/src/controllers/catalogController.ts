@@ -3,7 +3,7 @@ import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middlewares/auth';
 import { generateCallNumber } from '../utils/cutter';
 import { validateMarcRecord, getMarc21Template, exportMarcToText } from '../utils/marc21';
-import { MaterialType } from '@prisma/client';
+import { MaterialType, Prisma } from '@prisma/client';
 
 export async function listCatalog(req: AuthRequest, res: Response) {
   try {
@@ -111,6 +111,15 @@ export async function createCatalogRecord(req: AuthRequest, res: Response) {
     // The basic catalog form is the source of truth for title and responsibility.
     // Keep its MARC 245 synchronized so users do not need to type the title twice.
     const normalizedMarcData = normalizeMarcData(marcData, title, authors);
+    const marcDataInput = toJsonInput(normalizedMarcData);
+    const rdaDataInput = toJsonInput(rdaData);
+
+    if (marcData !== undefined && marcDataInput === undefined) {
+      return res.status(400).json({ error: 'Os dados MARC21 devem conter JSON válido.' });
+    }
+    if (rdaData !== undefined && rdaDataInput === undefined) {
+      return res.status(400).json({ error: 'Os dados RDA devem conter JSON válido.' });
+    }
 
     // Validate MARC21 if provided
     if (normalizedMarcData && Array.isArray(normalizedMarcData)) {
@@ -149,8 +158,8 @@ export async function createCatalogRecord(req: AuthRequest, res: Response) {
         cutterNotation,
         callNumber: generatedCallNumber,
         coverUrl,
-        marcData: normalizedMarcData,
-        rdaData,
+        marcData: marcDataInput,
+        rdaData: rdaDataInput,
       },
     });
 
@@ -176,6 +185,25 @@ function normalizeMarcData(marcData: unknown, title: string, authors?: string) {
   const authorSubfield = authorField?.subfields?.find((subfield: any) => subfield.code === 'a');
   if (authorSubfield && !authorSubfield.value?.trim() && authors) authorSubfield.value = authors;
   return fields;
+}
+
+function toJsonInput(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return Prisma.JsonNull;
+  return isJsonInputValue(value) ? value : undefined;
+}
+
+function isJsonInputValue(value: unknown): value is Prisma.InputJsonValue {
+  if (typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJsonInputValueOrNull);
+  if (!value || typeof value !== 'object') return false;
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return false;
+  return Object.values(value).every(isJsonInputValueOrNull);
+}
+
+function isJsonInputValueOrNull(value: unknown): value is Prisma.InputJsonValue | null {
+  return value === null || isJsonInputValue(value);
 }
 
 export async function updateCatalogRecord(req: AuthRequest, res: Response) {

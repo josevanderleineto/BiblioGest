@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken, requirePasswordChangeCheck, requirePermission } from '../middlewares/auth';
+import { loginRateLimiter, rejectLoginHoneypot, verifyTurnstile } from '../middlewares/loginProtection';
 import * as authCtrl from '../controllers/authController';
 import * as userCtrl from '../controllers/userController';
 import * as libCtrl from '../controllers/libraryController';
@@ -13,14 +14,12 @@ import * as acqCtrl from '../controllers/acquisitionController';
 import * as invCtrl from '../controllers/inventoryController';
 import * as repCtrl from '../controllers/reportController';
 import * as dbCtrl from '../controllers/databaseController';
-import * as setupCtrl from '../controllers/setupController';
 import * as settingsCtrl from '../controllers/settingsController';
 
 const router = Router();
 
-// Public Setup & Auth endpoints
-router.get('/setup/status', setupCtrl.checkSystemSetupStatus);
-router.post('/auth/login', authCtrl.login);
+// Public authentication endpoint
+router.post('/auth/login', loginRateLimiter, rejectLoginHoneypot, verifyTurnstile, authCtrl.login);
 router.get('/opac/settings', settingsCtrl.getPublicLibraryIdentity);
 
 // Public OPAC Catalog search endpoints
