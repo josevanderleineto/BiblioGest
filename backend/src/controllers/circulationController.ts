@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middlewares/auth';
 import { calculateOverdueFine } from '../utils/fineCalculator';
@@ -6,7 +7,7 @@ import { LoanStatus, ItemStatus, FineStatus, ReservationStatus } from '@prisma/c
 
 export async function checkout(req: AuthRequest, res: Response) {
   try {
-    const { registrationNumber, barcode, loanDaysOverride } = req.body;
+    const { registrationNumber, barcode, loanDaysOverride, requireUserPassword, userPassword } = req.body;
 
     if (!registrationNumber || !barcode) {
       return res.status(400).json({ error: 'Matrícula do usuário e código de barras do exemplar são obrigatórios.' });
@@ -25,6 +26,19 @@ export async function checkout(req: AuthRequest, res: Response) {
 
     if (!user || !user.isActive) {
       return res.status(404).json({ error: 'Usuário não encontrado ou inativo.' });
+    }
+
+    // A senha é opcional para permitir a circulação rápida, mas, quando o
+    // atendente a exigir, ela deve ser conferida no servidor contra o usuário
+    // informado — nunca apenas no navegador.
+    if (requireUserPassword) {
+      if (typeof userPassword !== 'string' || !userPassword) {
+        return res.status(400).json({ error: 'Informe a senha do usuário para confirmar o empréstimo.' });
+      }
+      const passwordMatches = await bcrypt.compare(userPassword, user.passwordHash);
+      if (!passwordMatches) {
+        return res.status(400).json({ error: 'Senha do usuário incorreta. Empréstimo não realizado.' });
+      }
     }
 
     // Check pending fines block
@@ -104,11 +118,11 @@ export async function returnItem(req: AuthRequest, res: Response) {
     const { barcode } = req.body;
 
     if (!barcode) {
-      return res.status(400).json({ error: 'Código de barras é obrigatório.' });
+      return res.status(400).json({ error: 'Código de barras ou tombo do exemplar é obrigatório.' });
     }
 
-    const item = await prisma.item.findUnique({
-      where: { barcode },
+    const item = await prisma.item.findFirst({
+      where: { OR: [{ barcode }, { tombo: barcode }] },
       include: { biblio: true },
     });
 

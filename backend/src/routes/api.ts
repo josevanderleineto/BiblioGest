@@ -104,6 +104,9 @@ router.get('/reports/overdue', requirePermission('reports.view'), repCtrl.getOve
 
 // Database Administration & Backup/Restore
 router.post('/database/test-connection', requirePermission('settings.view'), dbCtrl.testDatabaseConnection);
+router.get('/database/catalog-backup', requirePermission('database.backup'), dbCtrl.exportCatalogSpreadsheet);
+router.get('/database/catalog-backup.json', requirePermission('database.backup'), dbCtrl.exportCatalogBackup);
+router.get('/database/catalog-backup.mrc', requirePermission('database.backup'), dbCtrl.exportCatalogMarc21);
 router.get('/database/backup', requirePermission('database.backup'), dbCtrl.exportBackup);
 router.post('/database/restore', requirePermission('database.restore'), dbCtrl.restoreBackup);
 router.post('/database/import', requirePermission('database.import'), dbCtrl.importCollaborativeData);

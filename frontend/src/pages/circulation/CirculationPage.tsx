@@ -9,6 +9,8 @@ export const CirculationPage: React.FC = () => {
   // Checkout state
   const [regNum, setRegNum] = useState('');
   const [checkoutBarcode, setCheckoutBarcode] = useState('');
+  const [requireUserPassword, setRequireUserPassword] = useState(false);
+  const [userPassword, setUserPassword] = useState('');
   const [checkoutMsg, setCheckoutMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const checkoutBarcodeRef = useRef<HTMLInputElement>(null);
@@ -39,12 +41,15 @@ export const CirculationPage: React.FC = () => {
       const res = await api.post('/circulation/checkout', {
         registrationNumber: regNum.trim(),
         barcode: checkoutBarcode.trim(),
+        requireUserPassword,
+        userPassword: requireUserPassword ? userPassword : undefined,
       });
       setCheckoutMsg({
         type: 'success',
         text: `✓ Empréstimo realizado com sucesso! Vencimento: ${new Date(res.data.dueDate).toLocaleDateString('pt-BR')}`,
       });
       setCheckoutBarcode('');
+      setUserPassword('');
       checkoutBarcodeRef.current?.focus();
       fetchLoans();
     } catch (err: any) {
@@ -125,7 +130,7 @@ export const CirculationPage: React.FC = () => {
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
-          Devolução Rápida (Barcode)
+          Devolução
         </button>
         <button
           onClick={() => setActiveTab('loans')}
@@ -178,6 +183,34 @@ export const CirculationPage: React.FC = () => {
               />
             </div>
 
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={requireUserPassword}
+                onChange={(e) => { setRequireUserPassword(e.target.checked); setUserPassword(''); }}
+                className="mt-0.5"
+              />
+              <span className="text-sm">
+                <span className="block font-semibold text-slate-700 dark:text-slate-200">Exigir senha do usuário</span>
+                <span className="block text-xs text-slate-500 mt-0.5">Desmarcado: empresta apenas com matrícula e código do exemplar. Marcado: pede a senha do leitor antes de confirmar.</span>
+              </span>
+            </label>
+
+            {requireUserPassword && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Senha do usuário</label>
+                <input
+                  type="password"
+                  required
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  placeholder="Digite a senha do leitor"
+                  autoComplete="off"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm dark:text-white"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Código de Barras do Exemplar (Leitor Bipador)
@@ -216,7 +249,7 @@ export const CirculationPage: React.FC = () => {
         <div className="max-w-xl bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
           <h2 className="font-bold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <RotateCcw className="w-5 h-5 text-indigo-500" />
-            <span>Devolução Rápida por Código de Barras</span>
+            <span>Devolução de Exemplar</span>
           </h2>
 
           {returnMsg && (
@@ -239,7 +272,7 @@ export const CirculationPage: React.FC = () => {
           <form onSubmit={handleReturnSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                Bipar ou digitar código de barras do exemplar
+                Digite o tombo do exemplar ou bipe o código de barras
               </label>
               <div className="relative">
                 <Barcode className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -252,7 +285,7 @@ export const CirculationPage: React.FC = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && returnBarcode.trim()) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement)?.requestSubmit(); }
                   }}
-                  placeholder="Ex: 100001"
+                  placeholder="Ex: 100001 ou TOMBO-001"
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm dark:text-white font-mono font-bold text-indigo-600 dark:text-indigo-400"
                 />
               </div>
