@@ -5,18 +5,22 @@ import apiRouter from './routes/api';
 
 const app = express();
 
+const allowAnyOrigin = ENV.CORS_ORIGIN.includes('*');
+const allowedOrigins = ENV.CORS_ORIGIN.filter((origin) => origin !== '*');
+
+// O pacote "cors" nao combina "*" com credentials: true. O frontend envia JSON
+// e autentica por token no header Authorization, nunca por cookie, entao
+// dispense o credentials e use o wildcard estatico, que o pacote emite.
 app.use(cors({
-  origin: ENV.CORS_ORIGIN,
-  credentials: true,
+  origin: allowAnyOrigin ? '*' : allowedOrigins,
+  credentials: !allowAnyOrigin,
 }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// API Router
-app.use('/api', apiRouter);
-
-// Health check endpoint. The /api path is used by the Vercel Function.
+// Health check. Precisa vir antes do router: o /api do router exige token, e
+// o path /api/health existe justamente para o diagnostico da Function.
 app.get(['/health', '/api/health'], (req, res) => {
   res.json({
     status: 'OK',
@@ -25,6 +29,9 @@ app.get(['/health', '/api/health'], (req, res) => {
     turnstileConfigured: Boolean(ENV.TURNSTILE_SITE_KEY && ENV.TURNSTILE_SECRET_KEY),
   });
 });
+
+// API Router
+app.use('/api', apiRouter);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled server error:', err);

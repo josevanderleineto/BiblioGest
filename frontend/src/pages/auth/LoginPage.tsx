@@ -93,7 +93,17 @@ export const LoginPage: React.FC = () => {
       login(res.data.token, res.data.user, res.data.mustChangePassword);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao realizar login.');
+      // Sem resposta do servidor significa CORS, Function não implantada ou
+      // erro de boot. O status HTTP sozinho não explica nada para quem usa o
+      // sistema, então o detalhe fica no console.
+      if (!err.response) {
+        console.error('Falha de rede ao chamar a API de login.', err);
+        setError('Nao foi possivel contatar o servidor. Verifique sua conexao e recarregue a pagina.');
+      } else {
+        const detail = err.response.data?.error;
+        if (!detail) console.error('Resposta inesperada da API de login.', err.response.status, err.response.data);
+        setError(detail || 'Erro ao realizar login.');
+      }
       // Tokens do Turnstile são de uso único. Renova o desafio após qualquer
       // tentativa que não tenha autenticado o usuário.
       if (turnstileWidgetId.current && window.turnstile) {
