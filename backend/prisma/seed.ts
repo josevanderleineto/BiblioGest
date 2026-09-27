@@ -32,6 +32,10 @@ async function main() {
       { key: 'ALLOW_SELF_RENEWAL', value: 'true' },
       { key: 'FINE_ENABLED', value: 'true' },
     ],
+    // A failed/partial initial deployment can leave these settings in place
+    // before the administrator account is created. Preserve those values and
+    // continue the bootstrap instead of failing the entire Vercel build.
+    skipDuplicates: true,
   });
 
   // 2. Permissions
@@ -60,7 +64,15 @@ async function main() {
   ];
 
   const createdPermissions = await Promise.all(
-    permissionsData.map((p) => prisma.permission.create({ data: p }))
+    permissionsData.map((p) =>
+      prisma.permission.upsert({
+        where: { code: p.code },
+        create: p,
+        // Permissions already provisioned by an interrupted bootstrap are
+        // intentionally preserved.
+        update: {},
+      })
+    )
   );
 
   // 3. Roles
