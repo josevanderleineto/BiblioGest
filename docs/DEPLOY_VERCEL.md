@@ -1,91 +1,87 @@
-# Deploy do frontend na Vercel — BiblioGest
+# Deploy completo na Vercel — BiblioGest
 
-Este projeto usa a Vercel para publicar o **frontend React/Vite**. A API
-Express e o PostgreSQL devem estar publicados em outro serviço acessível pela
-internet (por exemplo, Render, Railway, Neon ou um servidor próprio).
+Este repositório publica o frontend React e o backend Express no **mesmo
+domínio Vercel**:
 
-> A Vercel não consegue acessar `localhost:5433` da máquina de desenvolvimento.
-> Portanto, não publique `DATABASE_URL`, `JWT_SECRET` nem a senha do banco nas
-> variáveis da Vercel neste modelo de deploy.
-
-## Antes de começar
-
-Tenha a API já publicada e funcionando. Abra no navegador ou execute:
-
-```bash
-curl https://URL-DA-API/health
+```text
+https://SEU-PROJETO.vercel.app/       → frontend
+https://SEU-PROJETO.vercel.app/api/*  → API Express
 ```
 
-O resultado esperado é um JSON com `"status":"OK"`. A URL usada no restante
-deste guia será, por exemplo, `https://bibliogest-api.onrender.com`.
+O PostgreSQL continua sendo um serviço gerenciado externo. A Vercel não pode
+acessar `localhost:5433` da sua máquina.
 
-No ambiente da API, configure pelo menos:
+## 1. Criar e conectar o banco PostgreSQL
+
+Crie um banco PostgreSQL na Vercel Storage (Prisma Postgres), Neon, Supabase,
+Railway ou outro provedor. Copie a string de conexão pública com SSL, por
+exemplo:
 
 ```env
-NODE_ENV=production
-DATABASE_URL=postgresql://... # banco PostgreSQL público, com SSL quando exigido
-JWT_SECRET=uma-chave-aleatoria-longa-e-exclusiva
-CORS_ORIGIN=https://SEU-PROJETO.vercel.app
+DATABASE_URL=postgresql://USUARIO:SENHA@HOST:5432/bibliogest?sslmode=require
 ```
 
-Inclua no `CORS_ORIGIN` também qualquer domínio personalizado, separando os
-valores por vírgula. Execute as migrações Prisma no ambiente da API antes do
-primeiro acesso.
+Para cargas maiores, prefira a URL com *pooling* fornecida pelo provedor. A
+variável é secreta e nunca deve começar com `VITE_`.
 
-## Configurar o projeto na Vercel
+## 2. Configurar o projeto Vercel
 
-1. Envie o `vercel.json` para a branch que será publicada:
-
-   ```bash
-   git add vercel.json frontend/.env.example docs/DEPLOY_VERCEL.md
-   git commit -m "configura deploy do frontend na Vercel"
-   git push origin main
-   ```
-
-2. Na [Vercel](https://vercel.com/new), importe o repositório do BiblioGest.
-   Se o projeto já existe, abra **Settings → General**.
-
-3. Em **Root Directory**, deixe o valor **vazio** (raiz do repositório). Remova
-   `backend` ou `frontend` se algum deles estiver configurado.
-
-4. Em **Build and Deployment Settings**, escolha **Vite** como *Framework
-   Preset*. Não sobrescreva os comandos de instalação, build ou diretório de
-   saída: o [vercel.json](../vercel.json) já define estes valores:
-
-   - instalação: `npm ci --prefix frontend`;
-   - build: `npm run build --prefix frontend`;
-   - saída: `frontend/dist`.
-
-5. Em **Settings → Environment Variables**, crie a variável abaixo para os
-   ambientes **Production** (e **Preview**, se quiser testar previews):
+1. Importe o repositório na [Vercel](https://vercel.com/new), ou abra o projeto
+   existente em **Settings → General**.
+2. Em **Root Directory**, deixe o campo **vazio**. Não selecione `backend` nem
+   `frontend`.
+3. Em **Build and Deployment Settings**, use o preset **Vite** e não sobrescreva
+   os comandos. O [vercel.json](../vercel.json) instala as duas aplicações,
+   gera o Prisma Client, aplica as migrações, prepara os dados iniciais e gera
+   o frontend.
+4. Em **Settings → Environment Variables**, adicione estas variáveis para
+   **Production**:
 
    ```env
-   VITE_API_URL=https://bibliogest-api.onrender.com/api
+   NODE_ENV=production
+   DATABASE_URL=postgresql://USUARIO:SENHA@HOST:5432/bibliogest?sslmode=require
+   JWT_SECRET=gere-uma-chave-aleatoria-com-no-minimo-32-caracteres
+   JWT_EXPIRES_IN=7d
+   CORS_ORIGIN=https://SEU-PROJETO.vercel.app
+   DEFAULT_ADMIN_USERNAME=admin
+   DEFAULT_ADMIN_PASSWORD=defina-uma-senha-forte-e-exclusiva
+   VITE_API_URL=/api
    ```
 
-   Troque a URL pelo endereço real da sua API. Mantenha o sufixo `/api`.
-   Variáveis `VITE_*` são incorporadas ao JavaScript durante o build, portanto
-   alterar esse valor exige um novo deploy.
+   `VITE_API_URL=/api` é o ponto que mantém frontend e backend no mesmo link.
+   Não cadastre `PORT`: a Vercel controla a execução das Functions.
 
-6. Clique em **Deploy** ou use **Redeploy** após salvar a variável.
+5. Clique em **Deploy**. O comando de build executa `prisma migrate deploy` e
+   o seed inicial. O seed é seguro para novos deploys: ele não altera um banco
+   que já tenha usuários cadastrados.
 
-## Conferência após o deploy
+## 3. Conferir o resultado
 
-1. Abra `https://SEU-PROJETO.vercel.app/`. A tela de login deve carregar sem o
-   erro `FUNCTION_INVOCATION_FAILED`.
-2. No DevTools do navegador, faça login e confirme que as requisições vão para
-   `https://bibliogest-api.onrender.com/api/...`, e não para `/api` na Vercel.
-3. Se o login retornar erro de CORS, adicione a URL exata da Vercel ao
-   `CORS_ORIGIN` da API e reinicie/reimplante a API.
+Após o deploy, abra:
+
+```text
+https://SEU-PROJETO.vercel.app/
+https://SEU-PROJETO.vercel.app/api/health
+```
+
+O endpoint `/api/health` deve retornar `{"status":"OK"}`. As chamadas do
+frontend para `/api/...` permanecem no mesmo domínio, sem URL externa e sem
+configuração CORS adicional no navegador.
+
+## Atualizar um projeto já criado
+
+1. Confirme que a branch `main` contém `api/index.ts`, `api/[...path].ts` e
+   `vercel.json`.
+2. Altere **Root Directory** para vazio.
+3. Cadastre as variáveis acima e faça **Redeploy** com a opção de limpar o cache
+   de build, se disponível.
 
 ## Solução de problemas
 
-| Sintoma | Causa provável | Correção |
-| --- | --- | --- |
-| `FUNCTION_INVOCATION_FAILED` ao abrir `/` | O projeto está apontando para `backend` ou tentando executar o Express na Vercel. | Deixe **Root Directory** vazio, confirme o `vercel.json` na branch publicada e faça Redeploy. |
-| Página abre, mas as chamadas retornam `404 /api/...` | `VITE_API_URL` não foi definido no build. | Defina a URL pública da API com o sufixo `/api` e faça Redeploy. |
-| Erro de CORS no login | A origem da Vercel não foi autorizada pelo backend. | Inclua `https://SEU-PROJETO.vercel.app` em `CORS_ORIGIN` e reimplante a API. |
-| Erro de conexão com o banco | A API usa uma URL local ou o banco não está acessível. | Configure `DATABASE_URL` no host da API com um PostgreSQL público; nunca use `localhost` da máquina local. |
-
-Para uma instalação unificada (frontend, API e banco no mesmo serviço), use o
-guia [DEPLOY_RENDER.md](DEPLOY_RENDER.md) em vez deste fluxo.
+| Sintoma | Correção |
+| --- | --- |
+| `FUNCTION_INVOCATION_FAILED` em `/` | Confirme Root Directory vazio, a presença de `vercel.json` na branch publicada e faça Redeploy. |
+| Falha no build em `prisma migrate deploy` | Corrija `DATABASE_URL`; ela deve apontar para o PostgreSQL remoto com SSL. |
+| `401` ou erro ao autenticar | Defina `JWT_SECRET` e `DEFAULT_ADMIN_*` nas variáveis de Production. |
+| API retorna `500` | Abra os logs da Function `/api/[...path]` na Vercel e confirme que o banco remoto está acessível. |
+| A página abre, mas a rota React dá `404` | Confirme que `vercel.json` tem o fallback SPA e faça novo deploy. |

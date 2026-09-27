@@ -4,6 +4,7 @@
   "description": "Backend API REST para o Sistema de Gestão de Biblioteca BiblioGest",
   "main": "dist/server.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",

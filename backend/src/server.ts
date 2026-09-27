@@ -1,28 +1,9 @@
 import express from 'express';
-import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { ENV } from './config/env';
-import apiRouter from './routes/api';
 import { initDatabase } from './config/dbInit';
-
-const app = express();
-
-app.use(cors({
-  origin: ENV.CORS_ORIGIN,
-  credentials: true,
-}));
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// API Router
-app.use('/api', apiRouter);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', system: 'BiblioGest', timestamp: new Date().toISOString() });
-});
+import { app } from './app';
 
 // Serve frontend static build if frontend/dist exists (Deploy Unificado)
 const possibleFrontendPaths = [
@@ -53,23 +34,25 @@ if (frontendDistPath) {
   });
 }
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled server error:', err);
-  res.status(500).json({ error: 'Erro interno no servidor.', details: err.message });
-});
+export function startServer() {
+  return app.listen(ENV.PORT, async () => {
+    console.log(`=======================================================`);
+    console.log(`🚀 BiblioGest Servidor Unificado rodando em http://localhost:${ENV.PORT}`);
+    console.log(`📌 Ambiente: ${ENV.NODE_ENV}`);
+    if (frontendDistPath) {
+      console.log(`🌐 Frontend & Backend integrados disponíveis na mesma porta!`);
+    }
+    console.log(`=======================================================`);
 
-const server = app.listen(ENV.PORT, async () => {
-  console.log(`=======================================================`);
-  console.log(`🚀 BiblioGest Servidor Unificado rodando em http://localhost:${ENV.PORT}`);
-  console.log(`📌 Ambiente: ${ENV.NODE_ENV}`);
-  if (frontendDistPath) {
-    console.log(`🌐 Frontend & Backend integrados disponíveis na mesma porta!`);
-  }
-  console.log(`=======================================================`);
-  
-  // Executar checagem e inicialização automática do banco de dados (local ou nuvem)
-  await initDatabase();
-});
+    // Executar checagem e inicialização automática do banco de dados (local ou nuvem)
+    await initDatabase();
+  });
+}
 
-export { app, server };
+// Em plataformas serverless (como Vercel), o módulo é importado pela Function.
+// Somente o processo iniciado por `npm run start` deve abrir uma porta.
+if (require.main === module) {
+  startServer();
+}
 
+export { app };
