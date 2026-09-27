@@ -46,16 +46,32 @@ variável é secreta e nunca deve começar com `VITE_`.
    DEFAULT_ADMIN_USERNAME=admin
    DEFAULT_ADMIN_PASSWORD=defina-uma-senha-forte-e-exclusiva
    VITE_API_URL=/api
+   TURNSTILE_SECRET_KEY=chave-secreta-do-cloudflare-turnstile
+   VITE_TURNSTILE_SITE_KEY=chave-publica-do-cloudflare-turnstile
    ```
 
    `VITE_API_URL=/api` é o ponto que mantém frontend e backend no mesmo link.
    Não cadastre `PORT`: a Vercel controla a execução das Functions.
 
-5. Clique em **Deploy**. O comando de build executa `prisma migrate deploy` e
+## 3. Proteger o login contra bots (Cloudflare Turnstile)
+
+1. No painel do [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile),
+   crie um widget e autorize o hostname `biblio-gest.vercel.app` (e seu domínio
+   personalizado, se houver).
+2. Copie a **Sitekey** para `VITE_TURNSTILE_SITE_KEY` e a **Secret key** para
+   `TURNSTILE_SECRET_KEY` nas variáveis de Production da Vercel.
+3. Faça um novo deploy. A chave pública é exibida no navegador; a chave secreta
+   fica somente na Function e valida cada token no Cloudflare.
+
+Além do Turnstile, a rota de login já limita tentativas por cliente e usa um
+campo honeypot. Sem `TURNSTILE_SECRET_KEY`, o widget fica desativado; em
+produção, mantenha as duas chaves configuradas.
+
+4. Clique em **Deploy**. O comando de build executa `prisma migrate deploy` e
    o seed inicial. O seed é seguro para novos deploys: ele não altera um banco
    que já tenha usuários cadastrados.
 
-## 3. Conferir o resultado
+## 4. Conferir o resultado
 
 Após o deploy, abra:
 

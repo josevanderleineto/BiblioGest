@@ -7,6 +7,7 @@ import { BookOpen, User, Lock, AlertCircle } from 'lucide-react';
 type TurnstileApi = {
   render: (container: HTMLElement, options: Record<string, unknown>) => string;
   remove: (widgetId: string) => void;
+  reset: (widgetId: string) => void;
 };
 
 declare global {
@@ -44,6 +45,7 @@ export const LoginPage: React.FC = () => {
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileError, setTurnstileError] = useState('');
   const turnstileContainer = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string>();
   const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -66,12 +68,14 @@ export const LoginPage: React.FC = () => {
           'error-callback': () => setTurnstileError('Não foi possível carregar a verificação de segurança.'),
           theme: 'auto',
         });
+        turnstileWidgetId.current = widgetId;
       })
       .catch(() => active && setTurnstileError('Não foi possível carregar a verificação de segurança.'));
 
     return () => {
       active = false;
       if (widgetId && window.turnstile) window.turnstile.remove(widgetId);
+      turnstileWidgetId.current = undefined;
     };
   }, [turnstileSiteKey]);
 
@@ -90,6 +94,12 @@ export const LoginPage: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao realizar login.');
+      // Tokens do Turnstile são de uso único. Renova o desafio após qualquer
+      // tentativa que não tenha autenticado o usuário.
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId.current);
+        setTurnstileToken('');
+      }
     } finally {
       setLoading(false);
     }
