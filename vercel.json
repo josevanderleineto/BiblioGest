@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "installCommand": "cd backend && npm ci && cd ../frontend && npm ci",
-  "buildCommand": "cd backend && npm run prisma:generate && npm run prisma:deploy && npm run prisma:seed && npm run build && cd ../frontend && npm run build",
+  "installCommand": "npm ci",
+  "buildCommand": "npx turbo run prisma:generate prisma:deploy prisma:seed build",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/**/*.ts": {
