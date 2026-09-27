@@ -63,7 +63,19 @@ export function rejectLoginHoneypot(req: Request, res: Response, next: NextFunct
  * active. Verification failures are closed (the login is not allowed).
  */
 export async function verifyTurnstile(req: Request, res: Response, next: NextFunction) {
-  if (!ENV.TURNSTILE_SECRET_KEY) return next();
+  const hasSiteKey = Boolean(ENV.TURNSTILE_SITE_KEY);
+  const hasSecretKey = Boolean(ENV.TURNSTILE_SECRET_KEY);
+
+  // Configuring only one key produces a login screen without a usable
+  // challenge (or a challenge the API can never validate). Make that failure
+  // explicit instead of returning a misleading "invalid credentials" error.
+  if (hasSiteKey !== hasSecretKey) {
+    return res.status(503).json({
+      error: 'O CAPTCHA está configurado de forma incompleta. Defina VITE_TURNSTILE_SITE_KEY e TURNSTILE_SECRET_KEY na Vercel e faça um novo deploy.',
+    });
+  }
+
+  if (!hasSecretKey) return next();
 
   const token = req.body?.turnstileToken;
   if (typeof token !== 'string' || !token.trim()) {

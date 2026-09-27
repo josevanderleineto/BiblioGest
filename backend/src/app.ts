@@ -18,7 +18,12 @@ app.use('/api', apiRouter);
 
 // Health check endpoint. The /api path is used by the Vercel Function.
 app.get(['/health', '/api/health'], (req, res) => {
-  res.json({ status: 'OK', system: 'BiblioGest', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'OK',
+    system: 'BiblioGest',
+    timestamp: new Date().toISOString(),
+    turnstileConfigured: Boolean(ENV.TURNSTILE_SITE_KEY && ENV.TURNSTILE_SECRET_KEY),
+  });
 });
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

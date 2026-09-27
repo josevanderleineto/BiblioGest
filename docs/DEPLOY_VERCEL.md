@@ -52,6 +52,9 @@ variável é secreta e nunca deve começar com `VITE_`.
 
    `VITE_API_URL=/api` é o ponto que mantém frontend e backend no mesmo link.
    Não cadastre `PORT`: a Vercel controla a execução das Functions.
+   As variáveis iniciadas por `VITE_` entram no JavaScript no momento do build:
+   após incluir ou alterar `VITE_TURNSTILE_SITE_KEY`, é obrigatório fazer um
+   novo deploy (não apenas salvar a variável).
 
 ## 3. Proteger o login contra bots (Cloudflare Turnstile)
 
@@ -62,6 +65,11 @@ variável é secreta e nunca deve começar com `VITE_`.
    `TURNSTILE_SECRET_KEY` nas variáveis de Production da Vercel.
 3. Faça um novo deploy. A chave pública é exibida no navegador; a chave secreta
    fica somente na Function e valida cada token no Cloudflare.
+
+Abra `https://SEU-PROJETO.vercel.app/api/health` após publicar. O campo
+`turnstileConfigured` precisa estar como `true`. Se estiver `false`, o login
+não terá CAPTCHA; confira se as duas chaves estão em **Production** e se o
+hostname do widget é exatamente o domínio da Vercel.
 
 Além do Turnstile, a rota de login já limita tentativas por cliente e usa um
 campo honeypot. Sem `TURNSTILE_SECRET_KEY`, o widget fica desativado; em
@@ -83,6 +91,15 @@ https://SEU-PROJETO.vercel.app/api/health
 O endpoint `/api/health` deve retornar `{"status":"OK"}`. As chamadas do
 frontend para `/api/...` permanecem no mesmo domínio, sem URL externa e sem
 configuração CORS adicional no navegador.
+
+### Administrador já criado, mas a senha não funciona
+
+`DEFAULT_ADMIN_PASSWORD` é usado somente na primeira criação da conta. Alterar
+essa variável depois que o banco já possui usuários **não troca** a senha
+existente. Para redefini-la, conecte o terminal ao mesmo `DATABASE_URL` da
+produção, defina o `DEFAULT_ADMIN_USERNAME` e a nova `DEFAULT_ADMIN_PASSWORD`
+nesse ambiente e execute `npm run admin:reset-password`. O próximo login
+exigirá que o administrador escolha uma senha própria.
 
 ## Atualizar um projeto já criado
 

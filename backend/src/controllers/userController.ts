@@ -3,10 +3,103 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middlewares/auth';
 import { PatronCategory } from '@prisma/client';
+import { logAudit } from '../middlewares/auditLogger';
+
+const ADMIN_ROLE = 'Administrador';
+const LIBRARIAN_ROLE = 'Bibliotecário';
+const ASSISTANT_ROLE = 'Auxiliar de Biblioteca';
 
 function userWithoutPassword<T extends { passwordHash: string }>(user: T) {
   const { passwordHash: _passwordHash, ...safeUser } = user;
   return safeUser;
+}
+
+/**
+ * There is no separate "reader" role in the existing schema: patron accounts
+ * use the Auxiliar de Biblioteca role. A supervisor may reset those accounts;
+ * an auxiliary may reset only non-staff patrons, never another staff account.
+ */
+function canResetTargetPassword(actorRole: string, target: { role: { name: string }; category: PatronCategory }) {
+  if (target.role.name !== ASSISTANT_ROLE) return false;
+  if (actorRole === ADMIN_ROLE || actorRole === LIBRARIAN_ROLE) return true;
+  return actorRole === ASSISTANT_ROLE && target.category !== PatronCategory.SERVIDOR;
+}
+
+export async function listPasswordResetTargets(req: AuthRequest, res: Response) {
+  try {
+    const actorRole = req.user?.roleName;
+    if (!actorRole) return res.status(401).json({ error: 'Não autenticado.' });
+
+    const where: any = { role: { name: ASSISTANT_ROLE } };
+    if (actorRole === ASSISTANT_ROLE) {
+      where.category = { not: PatronCategory.SERVIDOR };
+    } else if (actorRole !== ADMIN_ROLE && actorRole !== LIBRARIAN_ROLE) {
+      return res.status(403).json({ error: 'Seu perfil não pode redefinir senhas de outras pessoas.' });
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        registrationNumber: true,
+        category: true,
+        role: { select: { name: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return res.json(users.map((user) => ({ ...user, role: user.role.name })));
+  } catch {
+    return res.status(500).json({ error: 'Erro ao listar contas para redefinição de senha.' });
+  }
+}
+
+export async function resetUserPassword(req: AuthRequest, res: Response) {
+  try {
+    const actor = req.user;
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!actor) return res.status(401).json({ error: 'Não autenticado.' });
+    if (actor.id === id) {
+      return res.status(400).json({ error: 'Para alterar sua própria senha, use a opção de troca de senha do seu perfil.' });
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve possuir pelo menos 6 caracteres.' });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      include: { role: true },
+    });
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!canResetTargetPassword(actor.roleName, target)) {
+      return res.status(403).json({ error: 'Seu perfil não pode redefinir a senha desta conta.' });
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash: await bcrypt.hash(newPassword, 10),
+        mustChangePassword: true,
+      },
+    });
+
+    await logAudit({
+      userId: actor.id,
+      action: 'USER_PASSWORD_RESET',
+      module: 'USERS',
+      ipAddress: req.ip,
+      result: 'SUCCESS',
+      details: `Senha temporária definida para a conta ${target.username}.`,
+    });
+
+    return res.json({ message: 'Senha temporária definida. A pessoa deverá criar uma nova senha no próximo acesso.' });
+  } catch {
+    return res.status(500).json({ error: 'Erro ao redefinir a senha do usuário.' });
+  }
 }
 
 export async function listUsers(req: AuthRequest, res: Response) {

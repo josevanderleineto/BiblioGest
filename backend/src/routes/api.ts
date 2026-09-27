@@ -36,9 +36,11 @@ router.use(requirePasswordChangeCheck);
 
 // Users & RBAC
 router.get('/users', requirePermission('users.view'), userCtrl.listUsers);
+router.get('/users/password-reset-targets', requirePermission('users.reset_password'), userCtrl.listPasswordResetTargets);
 router.get('/users/:id', requirePermission('users.view'), userCtrl.getUserById);
 router.post('/users', requirePermission('users.create'), userCtrl.createUser);
 router.put('/users/:id', requirePermission('users.edit'), userCtrl.updateUser);
+router.post('/users/:id/reset-password', requirePermission('users.reset_password'), userCtrl.resetUserPassword);
 router.get('/roles', requirePermission('users.view'), userCtrl.listRoles);
 router.get('/permissions', requirePermission('users.view'), userCtrl.listPermissions);
 

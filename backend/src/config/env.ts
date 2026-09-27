@@ -37,5 +37,8 @@ export const ENV = {
   DEFAULT_ADMIN_PASSWORD: process.env.DEFAULT_ADMIN_PASSWORD || '',
   LOGIN_RATE_LIMIT_WINDOW_MS: positiveInteger(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
   LOGIN_RATE_LIMIT_MAX: positiveInteger(process.env.LOGIN_RATE_LIMIT_MAX, 10),
+  // The site key is public, but keeping its presence here lets the API detect
+  // an incomplete Turnstile setup before it silently blocks every login.
+  TURNSTILE_SITE_KEY: process.env.VITE_TURNSTILE_SITE_KEY?.trim() || '',
   TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY?.trim() || '',
 };

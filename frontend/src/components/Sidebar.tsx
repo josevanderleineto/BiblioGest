@@ -168,7 +168,7 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Módulo Usuários */}
-        {hasPermission('users.view') && (
+        {(hasPermission('users.view') || hasPermission('users.reset_password')) && (
           <div className="pt-2">
             <button
               onClick={() => setOpenUsers(!openUsers)}

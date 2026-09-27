@@ -40,6 +40,7 @@ async function main() {
     { code: 'users.create', name: 'Cadastrar Usuários', category: 'Usuários', description: 'Permite criar novos usuários no sistema.' },
     { code: 'users.edit', name: 'Editar Usuários', category: 'Usuários', description: 'Permite alterar dados de usuários.' },
     { code: 'users.delete', name: 'Excluir Usuários', category: 'Usuários', description: 'Permite inativar ou excluir usuários.' },
+    { code: 'users.reset_password', name: 'Redefinir Senhas', category: 'Usuários', description: 'Permite definir uma senha temporária para contas autorizadas.' },
     
     { code: 'catalog.view', name: 'Visualizar Acervo', category: 'Catalogação', description: 'Permite pesquisar e ver registros bibliográficos.' },
     { code: 'catalog.create', name: 'Catalogar Obras', category: 'Catalogação', description: 'Permite criar registros em MARC21/RDA.' },
@@ -105,7 +106,7 @@ async function main() {
   );
 
   // Assign Librarian permissions
-  const librarianPermCodes = ['users.view', 'users.create', 'users.edit', 'catalog.view', 'catalog.create', 'catalog.edit', 'circulation.checkout', 'circulation.return', 'circulation.renew', 'reports.view'];
+  const librarianPermCodes = ['users.view', 'users.create', 'users.edit', 'users.reset_password', 'catalog.view', 'catalog.create', 'catalog.edit', 'circulation.checkout', 'circulation.return', 'circulation.renew', 'reports.view'];
   const librarianPerms = createdPermissions.filter((p) => librarianPermCodes.includes(p.code));
   await Promise.all(
     librarianPerms.map((p) =>
@@ -117,7 +118,7 @@ async function main() {
 
   // A conta de atendimento pode consultar o acervo e realizar a circulação,
   // sem ter permissão para alterar a catalogação ou as configurações.
-  const assistantPermCodes = ['catalog.view', 'circulation.checkout', 'circulation.return', 'circulation.renew'];
+  const assistantPermCodes = ['users.reset_password', 'catalog.view', 'circulation.checkout', 'circulation.return', 'circulation.renew'];
   await Promise.all(
     createdPermissions.filter((p) => assistantPermCodes.includes(p.code)).map((p) =>
       prisma.rolePermission.create({ data: { roleId: assistantRole.id, permissionId: p.id } })
