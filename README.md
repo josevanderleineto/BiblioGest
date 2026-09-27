@@ -35,7 +35,7 @@ O **BiblioGest** é um sistema completo, moderno e de alta performance para auto
 
 ---
 
-## 💻 Como Iniciar Localmente (Instalação Rápida com 1 Comando)
+## 💻 Como Iniciar Localmente (Instalação  Rápida com 1 Comando)
 
 ### Pré-requisitos
 - Node.js v18+ ou v20+
