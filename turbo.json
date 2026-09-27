@@ -1,22 +1,17 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://turborepo.com/schema.json",
   "globalDependencies": ["**/.env.*local"],
-  "pipeline": {
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
-    },
-    "prisma:generate": {
-      "cache": false
-    },
-    "prisma:deploy": {
-      "cache": false
-    },
-    "prisma:seed": {
-      "cache": false
+      "outputs": ["dist/**"]
     },
     "lint": {},
     "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
       "cache": false,
       "persistent": true
     }

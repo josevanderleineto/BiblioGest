@@ -3,12 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "description": "Sistema Integrado de Gestão e Automação de Bibliotecas (BiblioGest)",
+  "packageManager": "npm@11.11.1",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "db:setup": "turbo run prisma:deploy && turbo run prisma:seed",
-    "admin:reset-password": "npm run admin:reset-password --prefix backend"
+    "start": "npm run start --workspace bibliogest-backend",
+    "db:generate": "npm run prisma:generate --workspace bibliogest-backend",
+    "db:deploy": "npm run prisma:deploy --workspace bibliogest-backend",
+    "db:seed": "npm run prisma:seed --workspace bibliogest-backend",
+    "db:setup": "npm run db:deploy && npm run db:seed",
+    "db:studio": "npm exec --workspace bibliogest-backend -- prisma studio",
+    "admin:reset-password": "npm run admin:reset-password --workspace bibliogest-backend"
   },
   "workspaces": [
     "backend",
