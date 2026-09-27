@@ -16,6 +16,7 @@
     "db:deploy": "npm run prisma:deploy --workspace bibliogest-backend",
     "db:seed": "npm run prisma:seed --workspace bibliogest-backend",
     "db:setup": "npm run db:deploy && npm run db:seed",
+    "db:setup:ci": "npm run db:setup || echo 'AVISO: setup do banco nao concluido no build; verificar DATABASE_URL'",
     "db:studio": "npm exec --workspace bibliogest-backend -- prisma studio",
     "admin:reset-password": "npm run admin:reset-password --workspace bibliogest-backend"
   },
@@ -23,6 +24,12 @@
     "backend",
     "frontend"
   ],
+  "allowScripts": {
+    "@prisma/client": true,
+    "@prisma/engines": true,
+    "prisma": true,
+    "esbuild": true
+  },
   "devDependencies": {
     "turbo": "^2.11.4"
   }

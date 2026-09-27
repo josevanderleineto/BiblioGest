@@ -1,12 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "regions": ["sa-east1"],
   "installCommand": "npm ci",
-  "buildCommand": "npm run db:setup && npm run build",
+  "buildCommand": "npm run db:setup:ci && npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "memory": 1024
     }
   },
   "routes": [
