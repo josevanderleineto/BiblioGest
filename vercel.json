@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
   "regions": ["gru1"],
   "installCommand": "npm --prefix /vercel/path0 ci",
   "buildCommand": "npm --prefix /vercel/path0 run db:setup:ci && npm --prefix /vercel/path0 run build",
-  "outputDirectory": "frontend/dist",
+  "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 30,
