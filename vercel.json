@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "regions": ["gru1"],
-  "installCommand": "npm ci",
-  "buildCommand": "npm run db:setup:ci && npm run build",
+  "installCommand": "npm --prefix /vercel/path0 ci",
+  "buildCommand": "npm --prefix /vercel/path0 run db:setup:ci && npm --prefix /vercel/path0 run build",
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/**/*.ts": {
