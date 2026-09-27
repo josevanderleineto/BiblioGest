@@ -2,6 +2,9 @@
 node_modules/
 .pnpm-store
 
+# Build caches
+.turbo/
+
 # Environment variables
 .env
 .env.local
