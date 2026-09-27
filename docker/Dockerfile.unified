@@ -24,10 +24,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 COPY backend/package*.json ./backend/
+COPY backend/prisma ./backend/prisma/
 RUN cd backend && npm ci --only=production
 
 COPY --from=backend-builder /app/backend/dist ./backend/dist
-COPY --from=backend-builder /app/backend/prisma ./backend/prisma
 COPY --from=backend-builder /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
