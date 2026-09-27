@@ -8,9 +8,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "npm run build --workspace bibliogest-backend",
+    "build:frontend": "npm run build --workspace bibliogest-frontend",
+    "dev:backend": "npm run dev --workspace bibliogest-backend",
+    "dev:frontend": "npm run dev --workspace bibliogest-frontend",
     "start": "npm run start --workspace bibliogest-backend",
     "db:generate": "npm run prisma:generate --workspace bibliogest-backend",
     "db:deploy": "npm run prisma:deploy --workspace bibliogest-backend",
@@ -30,7 +32,5 @@
     "prisma": true,
     "esbuild": true
   },
-  "devDependencies": {
-    "turbo": "^2.11.4"
-  }
+  "devDependencies": {}
 }
