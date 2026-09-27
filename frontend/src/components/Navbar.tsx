@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, LogOut, User as UserIcon, Shield, Search } from 'lucide-react';
+import { Sun, Moon, LogOut, Shield, Search, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ChangePasswordModal } from '../pages/auth/ForcePasswordChangeModal';
 
 export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   return (
     <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/60 px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm transition-colors">
@@ -55,6 +57,14 @@ export const Navbar: React.FC = () => {
           </div>
 
           <button
+            onClick={() => setShowPasswordModal(true)}
+            className="p-2 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+            title="Alterar minha senha"
+          >
+            <KeyRound className="w-5 h-5" />
+          </button>
+
+          <button
             onClick={logout}
             className="ml-2 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
             title="Sair do Sistema"
@@ -63,6 +73,7 @@ export const Navbar: React.FC = () => {
           </button>
         </div>
       </div>
+      {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
     </header>
   );
 };

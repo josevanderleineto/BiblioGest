@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { ShieldAlert, Lock, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const ForcePasswordChangeModal: React.FC = () => {
+type ChangePasswordModalProps = {
+  required?: boolean;
+  onClose?: () => void;
+};
+
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ required = false, onClose }) => {
   const { mustChangePassword, updateUser, hasPermission } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -13,7 +18,8 @@ export const ForcePasswordChangeModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  if (!mustChangePassword) return null;
+  const mustChange = required || mustChangePassword;
+  if (!mustChange && !onClose) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +42,11 @@ export const ForcePasswordChangeModal: React.FC = () => {
         newPassword,
       });
       updateUser({ mustChangePassword: false });
-      navigate(hasPermission('settings.edit') ? '/database' : '/dashboard');
+      if (mustChange) {
+        navigate(hasPermission('settings.edit') ? '/database' : '/dashboard');
+      } else {
+        onClose?.();
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao alterar senha.');
     } finally {
@@ -47,14 +57,21 @@ export const ForcePasswordChangeModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-900/50 p-6 space-y-4">
-        <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
-          <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0" />
+        <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
+          <ShieldAlert className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <h2 className="font-bold text-sm uppercase tracking-wide">Atenção — Segurança do Sistema</h2>
+            <h2 className="font-bold text-sm uppercase tracking-wide">{mustChange ? 'Atenção — Segurança do Sistema' : 'Alterar senha'}</h2>
             <p className="text-xs mt-0.5">
-              Esta é a senha inicial do sistema. Por segurança, você precisa alterar sua senha antes de continuar.
+              {mustChange
+                ? 'Esta é a senha inicial do sistema. Por segurança, você precisa alterar sua senha antes de continuar.'
+                : 'Informe sua senha atual e escolha uma nova senha segura.'}
             </p>
           </div>
+          {!mustChange && onClose && (
+            <button onClick={onClose} type="button" className="ml-auto text-amber-700/70 hover:text-amber-900 dark:text-amber-200" aria-label="Fechar">
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {error && (
@@ -115,4 +132,9 @@ export const ForcePasswordChangeModal: React.FC = () => {
       </div>
     </div>
   );
+};
+
+export const ForcePasswordChangeModal: React.FC = () => {
+  const { mustChangePassword } = useAuth();
+  return mustChangePassword ? <ChangePasswordModal required /> : null;
 };
