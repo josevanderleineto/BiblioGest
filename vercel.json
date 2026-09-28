@@ -4,13 +4,11 @@
   "installCommand": "npm --prefix /vercel/path0 ci",
   "buildCommand": "npm --prefix /vercel/path0 run db:setup:ci && npm --prefix /vercel/path0 run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
