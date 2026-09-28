@@ -5,7 +5,7 @@
   "buildCommand": "npm --prefix /vercel/path0 run db:setup:ci && npm --prefix /vercel/path0 run build",
   "outputDirectory": "dist",
   "functions": {
-    "dist/api/**/*.ts": {
+    "api/**/*.ts": {
       "maxDuration": 30,
       "memory": 1024
     }

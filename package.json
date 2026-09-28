@@ -8,8 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build:backend && npm run build:frontend && npm run build:api",
-    "build:api": "cp -r api dist/",
+    "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "npm run build --workspace bibliogest-backend",
     "build:frontend": "npm run build --workspace bibliogest-frontend",
     "dev:backend": "npm run dev --workspace bibliogest-backend",
