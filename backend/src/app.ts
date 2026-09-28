@@ -31,7 +31,10 @@ app.get(['/health', '/api/health'], (req, res) => {
 });
 
 // API Router
+// Vercel Functions strip the /api prefix before handing to the handler.
+// Mount on both to work in local dev (/api/...) and Vercel (/...).
 app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled server error:', err);
